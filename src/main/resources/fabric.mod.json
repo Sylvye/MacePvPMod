@@ -3,7 +3,7 @@
   "id": "macepvpmod",
   "version": "${version}",
   "name": "MacePvPMod",
-  "description": "A subtle, configurable pitch guide for elytra mace PvP.",
+  "description": "A client-only configurable HUD and combat-awareness toolkit for elytra mace PvP and survival. Created by Sylvye. Source: https://github.com/Sylvye/MacePvPMod",
   "environment": "client",
   "entrypoints": {
     "client": [

@@ -1,6 +1,15 @@
 # MacePvPMod
 
-A client-only Fabric mod for Minecraft **26.2**. **Elytra Pitch Bar** provides a pitch reference while gliding; **Damage Counter** shows accumulated fall distance and mace hit damage.
+MacePvPMod is a client-only Fabric HUD and quality-of-life mod for Minecraft **26.2**, designed for mace PvP, elytra combat, and survival awareness. It provides configurable visual and audio feedback without changing gameplay mechanics, flight, server-side damage, targeting, or network packets.
+
+The mod includes four independent modules:
+
+- **Elytra Pitch Bar** — a configurable on-screen pitch reference for repeatable elytra approaches and mace dives.
+- **Damage Counter** — displays accumulated fall distance and confirmed mace-hit damage, with reported and estimated calculation modes.
+- **Attribute Swaps** — gives visual and sound feedback when a hotbar selection changes the player’s active attack attributes.
+- **Survival instincts** — warns when a totem should be moved to the offhand and displays configurable low-health and low-saturation alerts, including optional audio cues.
+
+Created by **Sylvye**. Source code: [github.com/Sylvye/MacePvPMod](https://github.com/Sylvye/MacePvPMod).
 
 ## Install
 
@@ -20,7 +29,7 @@ While gliding, aim toward the horizontal grey line. It aligns with the crosshair
 
 Open **Mods → MacePvPMod → Configure**, or assign **Open MacePvPMod settings** under **Options → Controls → Key Binds → MacePvPMod**. The shortcut starts unbound.
 
-Select **Elytra Pitch Bar** or **Damage Counter** from the module directory. Each has a separate settings page and configuration file.
+Select a module from the directory. Each has a separate settings page and configuration file.
 
 ### Elytra Pitch Bar
 
@@ -53,6 +62,19 @@ The Minecraft 26.2 formula, verified against the bundled `MaceItem` and `Player`
 - A valid critical hit at cooldown above 0.9 multiplies the combined base and smash damage by 1.5, matching this version's attack code. Cooldown does not scale the smash bonus.
 
 Existing configurations retain reported mode. Non-living targets are not tracked.
+
+### Attribute Swaps
+
+Detects an attribute-changing hotbar swap during combat and optionally shows an **Attribute swap!** overlay and plays a configurable sound. Visual and sound feedback can be controlled separately. The default sound is `minecraft:entity.experience_orb.pickup`.
+
+### Survival instincts
+
+- **Totem warning:** displays a configurable alert when the player has a Totem of Undying in the inventory but the offhand is empty.
+- **Health and saturation warnings:** displays separate configurable messages for low health, low saturation, or both at once.
+- **Audio cues:** plays configurable harp and bass cues, with timing that can shorten as the condition becomes more urgent.
+- Text, colors, size, screen position, thresholds, volume, pitch, and timing are configurable.
+
+These alerts are hidden while viewing menus, spectating, dead, paused, or hiding the HUD. Configurations are stored in `config/macepvpmod-attribute-swaps.json` and `config/macepvpmod-survival.json`.
 
 ## Build and test
 
