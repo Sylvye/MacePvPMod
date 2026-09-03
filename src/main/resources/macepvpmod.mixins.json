@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.macepvpmod.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "DamageEventMixin",
+    "AttributeSwapMouseMixin",
+    "AttributeSwapInventoryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

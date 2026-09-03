@@ -1,0 +1,18 @@
+# Gradle
+.gradle/
+build/
+
+# Fabric/Minecraft development runtime
+run/
+logs/
+
+# IDEs and OS metadata
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Local environment files
+*.local
+*.log
+
