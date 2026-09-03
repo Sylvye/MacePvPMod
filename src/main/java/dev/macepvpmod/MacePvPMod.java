@@ -14,8 +14,12 @@ public final class MacePvPMod implements ClientModInitializer {
     public static final ConfigStore CONFIG = new ConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod.json"));
     public static final DamageConfigStore DAMAGE_CONFIG = new DamageConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-damage.json"));
     public static final AttributeSwapConfigStore ATTRIBUTE_SWAP_CONFIG = new AttributeSwapConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-attribute-swaps.json"));
+    public static final SurvivalConfigStore SURVIVAL_CONFIG = new SurvivalConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-survival.json"));
     @Override public void onInitializeClient() {
         CONFIG.load();
+        SURVIVAL_CONFIG.load();
+        HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
+                Identifier.fromNamespaceAndPath("macepvpmod", "survival_instincts"), SurvivalHud::extract);
         ATTRIBUTE_SWAP_CONFIG.load();
         DAMAGE_CONFIG.load();
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
@@ -31,6 +35,7 @@ public final class MacePvPMod implements ClientModInitializer {
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath("macepvpmod", "settings"))));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             DamageHud.tick(client);
+            SurvivalHud.tick(client);
             AttributeSwaps.endTick();
             while (settings.consumeClick()) {
                 if (client.gui.screen() == null) client.gui.setScreen(new SettingsScreen(null));

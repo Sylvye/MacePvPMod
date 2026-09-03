@@ -16,6 +16,8 @@ public final class SettingsScreen extends Screen {
                 .bounds(width / 2 - 110, 94, 220, 24).build());
         addRenderableWidget(Button.builder(Component.literal("Attribute Swaps"), b -> minecraft.gui.setScreen(new AttributeSwapSettingsScreen(this)))
                 .bounds(width / 2 - 110, 128, 220, 24).build());
+        addRenderableWidget(Button.builder(Component.literal("Survival instincts"), b -> minecraft.gui.setScreen(new SurvivalSettingsScreen(this)))
+                .bounds(width / 2 - 110, 162, 220, 24).build());
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 110, height - 30, 220, 20).build());
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g, int x, int y, float dt) {
