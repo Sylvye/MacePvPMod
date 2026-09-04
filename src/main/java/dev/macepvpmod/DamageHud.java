@@ -34,7 +34,9 @@ public final class DamageHud {
                 && packet.sourceCauseId() == mc.player.getId()) confirmed = true;
     }
     public static void tick(Minecraft mc) {
+        FallCounter.tick(mc.player);
         if (mc.level != level || mc.player == null || !mc.player.isAlive()) {
+            FallCounter.reset();
             level = mc.level; target = null; displayTicks = 0; hit = ""; return;
         }
         if (displayTicks > 0) displayTicks--;
@@ -53,14 +55,18 @@ public final class DamageHud {
     }
     private static void show(String text) { hit = text; displayTicks = MacePvPMod.DAMAGE_CONFIG.current().hitSeconds() * 20; }
     static String visibleHit() { return displayTicks > 0 ? hit : ""; }
-    static boolean showFall(double distance) { return Double.isFinite(distance) && distance > 1.5; }
+    static boolean showFall(double distance) { return showFall(distance, 1.5); }
+    static boolean showFall(double distance, double threshold) {
+        return Double.isFinite(distance) && Double.isFinite(threshold) && distance > threshold;
+    }
     public static void extract(GuiGraphicsExtractor g, DeltaTracker delta) {
         var mc = Minecraft.getInstance(); var p = mc.player;
         if (p == null || mc.level == null || mc.gui.screen() != null || mc.gui.hud.isHidden()
                 || !p.isAlive() || p.isSpectator()) return;
         var c = MacePvPMod.DAMAGE_CONFIG.current();
-        if (c.fallEnabled() && !p.onGround() && showFall(p.fallDistance))
-            HudRenderer.text(g, DamageText.format(c.fallTemplate(), p.fallDistance, 0), MacePvPMod.HUD_CONFIG.current().fall(), 0);
+        double fallBlocks = FallCounter.distance(p);
+        if (c.fallEnabled() && showFall(fallBlocks, c.fallThreshold()))
+            HudRenderer.text(g, DamageText.format(c.fallTemplate(), fallBlocks, 0), MacePvPMod.HUD_CONFIG.current().fall(), 0);
         if (c.hitEnabled() && displayTicks > 0) HudRenderer.text(g, hit, MacePvPMod.HUD_CONFIG.current().hit(), 0);
     }
 }

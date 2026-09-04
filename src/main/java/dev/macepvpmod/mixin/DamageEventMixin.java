@@ -10,6 +10,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public abstract class DamageEventMixin {
+    @Inject(method = "handleMovePlayer", at = @At("TAIL"))
+    private void macepvpmod$positionReset(net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
+        dev.macepvpmod.FallCounter.reset();
+    }
     @Inject(method = "handleDamageEvent", at = @At("TAIL"))
     private void macepvpmod$damage(ClientboundDamageEventPacket packet, CallbackInfo ci) {
         DamageHud.damageEvent(packet);

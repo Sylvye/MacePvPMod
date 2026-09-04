@@ -82,6 +82,26 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 p.setPos(p.getX(), p.getY() + 40, p.getZ());
                 p.setOnGround(false); p.startFallFlying(); p.setXRot(40); p.xRotO = 40;
                 check(PitchHud.shouldRender(mc, defaults), "Gliding guide should be visible");
+                FallCounter.reset();
+                p.getAbilities().flying = false;
+                double startY = p.getY();
+                for (int i = 0; i < 20; i++) {
+                    p.setDeltaMovement(0, -.1, 0);
+                    p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -.1, 0));
+                    p.checkFallDistanceAccumulation();
+                }
+                check(Math.abs(FallCounter.distance(p) - (startY - p.getY())) < 1e-6, "Glide counter must track actual movement");
+                check(DamageHud.showFall(FallCounter.distance(p)), "Shallow glide must appear after 1.5 actual blocks");
+                check(p.fallDistance <= 1, "Vanilla shallow-glide damage distance should still be capped");
+                p.stopFallFlying();
+                p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -1, 0));
+                check(Math.abs(FallCounter.distance(p) - 3) < 1e-6, "Leaving elytra must preserve descent");
+                p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, .2, 0));
+                check(FallCounter.distance(p) == 0, "Ascending must start a new descent");
+                p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -2, 0));
+                p.setOnGround(true); FallCounter.tick(p);
+                check(FallCounter.distance(p) == 0, "Landing must reset descent");
+                p.setOnGround(false); p.startFallFlying();
                 mc.gui.hud.toggle(); check(!PitchHud.shouldRender(mc, defaults), "F1 should hide guide"); mc.gui.hud.toggle();
                 mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
                 check(!PitchHud.shouldRender(mc, defaults), "Third person should be hidden by default");

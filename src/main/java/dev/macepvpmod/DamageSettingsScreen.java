@@ -7,12 +7,13 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 public final class DamageSettingsScreen extends Screen {
     private final Screen parent;private final DamageConfig original;
-    private boolean fall,hit,calculated;private int seconds;private String fallText,hitText,error="";private Button save;
+    private boolean fall,hit,calculated;private double fallThreshold;private int seconds;private String fallText,hitText,error="";private Button save;
     public DamageSettingsScreen(Screen parent){super(Component.literal("Damage Counter"));this.parent=parent;original=MacePvPMod.DAMAGE_CONFIG.current();read(original);}
-    private void read(DamageConfig c){fall=c.fallEnabled();hit=c.hitEnabled();calculated=c.calculatedDamage();seconds=c.hitSeconds();fallText=c.fallTemplate();hitText=c.hitTemplate();}
+    private void read(DamageConfig c){fall=c.fallEnabled();hit=c.hitEnabled();calculated=c.calculatedDamage();fallThreshold=c.fallThreshold();seconds=c.hitSeconds();fallText=c.fallTemplate();hitText=c.hitTemplate();}
     private String validation(){String e=DamageText.error(fallText,false);return e.isEmpty()?DamageText.error(hitText,true):e;}
     protected void init(){int w=Math.min(420,width-32);var rows=LinearLayout.vertical().spacing(6);
         rows.addChild(Button.builder(Component.literal("Fall distance: "+(fall?"On":"Off")),b->{fall=!fall;rebuildWidgets();}).bounds(0,0,w,20).build());
+        rows.addChild(SettingsControls.slider("Fall threshold (blocks)",fallThreshold,0,20,.1,w,v->fallThreshold=v));
         template(rows,false,w);
         rows.addChild(Button.builder(Component.literal("Hit damage: "+(hit?"On":"Off")),b->{hit=!hit;rebuildWidgets();}).bounds(0,0,w,20).build());
         template(rows,true,w);
@@ -21,7 +22,7 @@ public final class DamageSettingsScreen extends Screen {
         rows.addChild(Button.builder(Component.literal("Edit appearance in HUD"),b->minecraft.gui.setScreen(new HudSettingsScreen(this,1))).bounds(0,0,w,20).build());
         rows.addChild(Button.builder(Component.literal("Reset defaults"),b->{read(DamageConfig.defaults());rebuildWidgets();}).bounds(0,0,w,20).build());
         var scroll=new ScrollableLayout(minecraft,rows,Math.max(40,height-78));scroll.setMinWidth(w);scroll.arrangeElements();scroll.setX((width-scroll.getWidth())/2);scroll.setY(30);scroll.visitWidgets(this::addRenderableWidget);
-        save=addRenderableWidget(Button.builder(Component.literal("Save"),b->{try{MacePvPMod.DAMAGE_CONFIG.save(new DamageConfig(1,fall,original.fallColor(),original.fallSize(),original.fallX(),original.fallY(),hit,original.hitColor(),original.hitSize(),original.hitX(),original.hitY(),seconds,calculated,fallText,hitText));onClose();}catch(IOException e){error="Could not save settings.";}}).bounds(width/2-104,height-26,100,20).build());save.active=validation().isEmpty();
+        save=addRenderableWidget(Button.builder(Component.literal("Save"),b->{try{MacePvPMod.DAMAGE_CONFIG.save(new DamageConfig(1,fall,original.fallColor(),original.fallSize(),original.fallX(),original.fallY(),hit,original.hitColor(),original.hitSize(),original.hitX(),original.hitY(),seconds,calculated,fallText,hitText,fallThreshold));onClose();}catch(IOException e){error="Could not save settings.";}}).bounds(width/2-104,height-26,100,20).build());save.active=validation().isEmpty();
         addRenderableWidget(Button.builder(Component.literal("Cancel"),b->onClose()).bounds(width/2+4,height-26,100,20).build());
     }
     private void template(LinearLayout rows,boolean isHit,int w){
