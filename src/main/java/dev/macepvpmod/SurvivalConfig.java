@@ -4,11 +4,18 @@ public record SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean 
         String retotemText, int retotemColor, double retotemSize, double retotemX, double retotemY,
         String healthText, int healthColor, String saturationText, int saturationColor,
         String combinedText, int combinedColor, double healingSize, double healingX, double healingY,
-        double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval) {
+        double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval, java.util.List<SurvivalItemRule> healingItems, java.util.List<SurvivalItemRule> saturationItems, java.util.List<SoundEntry> sounds) {
+    public SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean healingEnabled,
+        String retotemText, int retotemColor, double retotemSize, double retotemX, double retotemY,
+        String healthText, int healthColor, String saturationText, int saturationColor,
+        String combinedText, int combinedColor, double healingSize, double healingX, double healingY,
+        double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval, java.util.List<SurvivalItemRule> healingItems, java.util.List<SurvivalItemRule> saturationItems) {
+        this(schemaVersion, retotemEnabled, healingEnabled, retotemText, retotemColor, retotemSize, retotemX, retotemY, healthText, healthColor, saturationText, saturationColor, combinedText, combinedColor, healingSize, healingX, healingY, healthPercent, saturationThreshold, harpVolume, bassVolume, harpPitch, bassPitch, audioStartInterval, audioEndInterval, healingItems, saturationItems, SoundEntry.legacy(harpVolume, bassVolume, harpPitch, bassPitch));
+    }
     public static SurvivalConfig defaults() {
         return new SurvivalConfig(1, true, true, "EQUIP TOTEM!", 0xffff55, 1.5, 50, 18,
                 "LOW HEALTH !", 0xff3333, "Low saturation!", 0xff9900,
-                "LOW HEALTH + SAT!", 0xaa0000, 1.5, 50, 10, 50, 10, .5, .5, 1, 1, .75, .25);
+                "LOW HEALTH + SAT!", 0xaa0000, 1.5, 50, 10, 50, 10, .5, .5, 1, 1, .75, .25, SurvivalItemRule.healingDefaults(), SurvivalItemRule.saturationDefaults());
     }
     public SurvivalConfig validated() {
         if (schemaVersion != 1) throw new IllegalArgumentException("Unsupported configuration version");
@@ -22,7 +29,10 @@ public record SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean 
                 clamp(healthPercent, 0, 100, 50), clamp(saturationThreshold, 0, 20, 10), clamp(harpVolume, 0, 1, .5), clamp(bassVolume, 0, 1, .5),
                 clamp(harpPitch, .5, 2, 1), clamp(bassPitch, .5, 2, 1),
                 clamp(audioStartInterval, .05, 3, .75),
-                Math.min(clamp(audioStartInterval, .05, 3, .75), clamp(audioEndInterval, .05, 3, .25)));
+                Math.min(clamp(audioStartInterval, .05, 3, .75), clamp(audioEndInterval, .05, 3, .25)),
+                SurvivalItemRule.validated(healingItems, SurvivalItemRule.healingDefaults()),
+                SurvivalItemRule.validated(saturationItems, SurvivalItemRule.saturationDefaults()),
+                sounds == null ? SoundEntry.legacy(harpVolume, bassVolume, harpPitch, bassPitch) : sounds.stream().filter(java.util.Objects::nonNull).map(SoundEntry::validated).toList());
     }
     private static String text(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value.substring(0, Math.min(80, value.length()));

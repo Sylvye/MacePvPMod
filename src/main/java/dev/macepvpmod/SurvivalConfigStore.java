@@ -24,11 +24,42 @@ public final class SurvivalConfigStore {
                 if (!saved.has("harpVolume")) saved.add("harpVolume", saved.get("lowHealthVolume"));
                 if (!saved.has("bassVolume")) saved.add("bassVolume", saved.get("lowHealthVolume"));
             }
+            if (!saved.has("sounds")) saved.add("sounds", GSON.toJsonTree(SoundEntry.legacy(
+                    saved.has("harpVolume") ? saved.get("harpVolume").getAsDouble() : .5,
+                    saved.has("bassVolume") ? saved.get("bassVolume").getAsDouble() : .5,
+                    saved.has("harpPitch") ? saved.get("harpPitch").getAsDouble() : 1,
+                    saved.has("bassPitch") ? saved.get("bassPitch").getAsDouble() : 1)));
             // Overlay saved fields onto defaults so newly added settings remain usable.
             JsonObject merged = GSON.toJsonTree(SurvivalConfig.defaults()).getAsJsonObject();
             for (var entry : saved.entrySet()) {
                 if (merged.has(entry.getKey())) {
                     JsonElement value = entry.getValue();
+                    if (entry.getKey().equals("healingItems") || entry.getKey().equals("saturationItems")) {
+                        if (!value.isJsonArray()) throw new JsonParseException("Invalid item list");
+                        for (var element : value.getAsJsonArray()) {
+                            if (!element.isJsonObject()) throw new JsonParseException("Invalid item rule");
+                            var rule = element.getAsJsonObject();
+                            if (!rule.has("item") || !rule.get("item").isJsonPrimitive() || !rule.getAsJsonPrimitive("item").isString())
+                                throw new JsonParseException("Invalid item ID");
+                            if (rule.has("potion") && !rule.get("potion").isJsonNull()
+                                    && (!rule.get("potion").isJsonPrimitive() || !rule.getAsJsonPrimitive("potion").isString()))
+                                throw new JsonParseException("Invalid potion ID");
+                        }
+                        merged.add(entry.getKey(), value); continue;
+                    }
+                    if (entry.getKey().equals("sounds")) {
+                        if (!value.isJsonArray()) throw new JsonParseException("Invalid sound list");
+                        for (var element : value.getAsJsonArray()) {
+                            if (!element.isJsonObject()) throw new JsonParseException("Invalid sound entry");
+                            var sound = element.getAsJsonObject();
+                            if (!sound.has("sound") || !sound.get("sound").isJsonPrimitive() || !sound.getAsJsonPrimitive("sound").isString()) throw new JsonParseException("Invalid sound ID");
+                            for (String field : new String[]{"volume", "pitch"}) {
+                                if (!sound.has(field)) sound.addProperty(field, field.equals("volume") ? .5 : 1);
+                                if (!sound.get(field).isJsonPrimitive() || !sound.getAsJsonPrimitive(field).isNumber()) throw new JsonParseException("Invalid sound " + field);
+                            }
+                        }
+                        merged.add(entry.getKey(), value); continue;
+                    }
                     JsonPrimitive expected = merged.getAsJsonPrimitive(entry.getKey());
                     if (!value.isJsonPrimitive()) throw new JsonParseException("Invalid " + entry.getKey());
                     JsonPrimitive actual = value.getAsJsonPrimitive();

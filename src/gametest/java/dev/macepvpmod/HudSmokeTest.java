@@ -15,6 +15,13 @@ public final class HudSmokeTest implements FabricClientGameTest {
             context.runOnClient(mc -> {
                 var p = mc.player;
                 var defaults = PitchConfig.defaults();
+                AttributeSwaps.click();
+                AttributeSwaps.selected(p.getInventory(), (p.getInventory().getSelectedSlot() + 1) % 9);
+                check(AttributeSwaps.shouldRender(mc), "Swap should show HUD text");
+                mc.gui.hud.toggle(); check(!AttributeSwaps.shouldRender(mc), "F1 must hide swap HUD"); mc.gui.hud.toggle();
+                mc.gui.setScreen(new SettingsScreen(null)); check(!AttributeSwaps.shouldRender(mc), "Menus must hide swap HUD"); mc.gui.setScreen(null);
+                for (int i = 0; i < 60; i++) AttributeSwaps.endTick();
+                check(!AttributeSwaps.shouldRender(mc), "Swap HUD should expire after three seconds");
                 check(!DamageHud.showFall(1.5), "Threshold must be strictly above 1.5");
                 check(DamageHud.showFall(1.51), "Fall distance should appear above threshold");
                 check(!DamageHud.showFall(0), "Reset fall distance should hide");
@@ -41,7 +48,7 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
                 DamageHud.tick(mc);
                 check(DamageHud.visibleHit().isEmpty(), "Non-mace attacks must not display");
-                try { MacePvPMod.DAMAGE_CONFIG.save(new DamageConfig(1, true, 0xffffff, 1, 0, 14, true, 0xff6666, 1, 0, 28, 3, true)); }
+                try { MacePvPMod.DAMAGE_CONFIG.save(new DamageConfig(1, true, 0xffffff, 1, 0, 14, true, 0xff6666, 1, 0, 28, 3, true, "{blocks} blocks", "{damage} damage / {blocks} blocks")); }
                 catch (java.io.IOException e) { throw new RuntimeException(e); }
                 p.setSprinting(true); p.fallDistance = 8;
                 var plain = new ItemStack(Items.MACE);
@@ -64,7 +71,7 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 p.fallDistance = 0; p.setItemSlot(EquipmentSlot.MAINHAND, plain);
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
                 DamageHud.tick(mc);
-                check(DamageHud.visibleHit().equals(String.format(java.util.Locale.ROOT, "%.1f damage (calc)", expected)),
+                check(DamageHud.visibleHit().equals(String.format(java.util.Locale.ROOT, "%.1f damage / 8.0 blocks", expected)),
                         "Calculated damage must use attack-time fall/enchantment snapshot without health loss");
                 p.setSprinting(false);
                 try { MacePvPMod.DAMAGE_CONFIG.save(DamageConfig.defaults()); }

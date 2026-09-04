@@ -15,6 +15,7 @@ public final class MacePvPMod implements ClientModInitializer {
     public static final DamageConfigStore DAMAGE_CONFIG = new DamageConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-damage.json"));
     public static final AttributeSwapConfigStore ATTRIBUTE_SWAP_CONFIG = new AttributeSwapConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-attribute-swaps.json"));
     public static final SurvivalConfigStore SURVIVAL_CONFIG = new SurvivalConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-survival.json"));
+    public static final HudConfigStore HUD_CONFIG = new HudConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-hud.json"));
     @Override public void onInitializeClient() {
         CONFIG.load();
         SURVIVAL_CONFIG.load();
@@ -22,6 +23,9 @@ public final class MacePvPMod implements ClientModInitializer {
                 Identifier.fromNamespaceAndPath("macepvpmod", "survival_instincts"), SurvivalHud::extract);
         ATTRIBUTE_SWAP_CONFIG.load();
         DAMAGE_CONFIG.load();
+        HUD_CONFIG.load();
+        HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
+                Identifier.fromNamespaceAndPath("macepvpmod", "attribute_swap"), AttributeSwaps::extract);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
                 Identifier.fromNamespaceAndPath("macepvpmod", "damage_counter"), DamageHud::extract);
         net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {

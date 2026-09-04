@@ -30,3 +30,19 @@ Limits: Vulkan was not tested. Actual window resizing, spectator mode, the unbou
 - Client checks verify reading Density V from a mace adds 20 raw points at 8 blocks; Breach IV leaves raw damage unchanged; calculated mode waits for hit confirmation but needs no health decrease; resetting fall distance and switching weapons after attacking does not change the saved calculation.
 - Settings checks verify the new mode does not apply before Save, persists after Save, and resets to Reported. Old configuration files default to Reported.
 - Visually inspected the calculated-mode settings page. Live multiplayer and custom server damage rules remain untested.
+
+## Settings and HUD upgrade — September 4, 2026
+
+- `./gradlew test build runClientGameTest`: passed with Mod Menu installed; 41 unit tests, zero failures/errors, and all three client game tests passed.
+- An earlier full client run also passed with `-PwithoutModMenu`.
+- Added regression coverage for template validation/persistence, legacy audio and HUD migration, empty/unavailable/duplicate sound entries, playlist iteration/reset, invalid styles, and damaged HUD file backup.
+- Client checks cover HUD draft isolation, numeric validation, dragging, resizing, nudging, persistence, color validation, and attack-time `{blocks}` in calculated hit messages without a mode suffix.
+- Captured and visually reviewed the picker, HUD controls/global preview, module directory, sound playlist, and damage template screen at requested GUI scales 1/2/3. Minecraft clamps scales unsupported by the test window.
+- Existing combat confirmation, visibility, survival-item, and cadence tests continue to pass. The client runner uses disposable configurations under `build/run/clientGameTest`.
+- Limits: no live multiplayer session or physical window-resize interaction was tested. Arbitrary sound content and audio-device behavior were not exhaustively auditioned.
+
+## Attribute Swap HUD follow-up
+
+- Attribute swap notifications now render as the sixth editable HUD element instead of using the actionbar; added the module shortcut and preserved the visual toggle.
+- `./gradlew test build runClientGameTest` passed (42 unit tests and all three client tests).
+- Verified old HUD-file migration preserves other styles, the new style persists, notifications expire after three seconds, and F1/menus hide them. Visually reviewed the global preview with Attribute swap selected.

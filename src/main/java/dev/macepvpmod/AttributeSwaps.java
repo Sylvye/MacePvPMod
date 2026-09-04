@@ -3,17 +3,20 @@ package dev.macepvpmod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class AttributeSwaps {
     private static final AttributeSwapTracker TRACKER = new AttributeSwapTracker();
+    static final String HUD_TEXT = "Attribute swap!";
+    private static int displayTicks;
     private static Object player;
     private static Object level;
     private static boolean active(Minecraft mc) {
         if (player != mc.player || level != mc.level) {
-            TRACKER.reset(); player = mc.player; level = mc.level;
+            displayTicks = 0; TRACKER.reset(); player = mc.player; level = mc.level;
         }
         if (mc.player == null || mc.level == null || mc.gui.screen() != null || mc.isPaused()) {
             TRACKER.reset(); return false;
@@ -29,11 +32,27 @@ public final class AttributeSwaps {
         if (mc.player == null || inventory != mc.player.getInventory()) return;
         if (active(mc) && TRACKER.select(slot)) {
             AttributeSwapConfig config = MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current();
-            if (config.visualEnabled()) mc.player.sendOverlayMessage(Component.literal("Attribute swap!"));
+            if (config.visualEnabled()) displayTicks = 60;
             if (config.soundEnabled()) playSound(config.soundId());
         }
     }
-    public static void endTick() { TRACKER.reset(); }
+    public static void endTick() {
+        TRACKER.reset();
+        var mc = Minecraft.getInstance();
+        if (player != mc.player || level != mc.level || mc.player == null || !mc.player.isAlive()
+                || mc.player.isSpectator() || !MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().visualEnabled()) {
+            displayTicks = 0;
+            player = mc.player; level = mc.level;
+        } else if (!mc.isPaused() && displayTicks > 0) displayTicks--;
+    }
+    static boolean shouldRender(Minecraft mc) {
+        return displayTicks > 0 && player == mc.player && level == mc.level && mc.player != null && mc.level != null
+                && mc.player.isAlive() && !mc.player.isSpectator() && mc.gui.screen() == null
+                && !mc.gui.hud.isHidden() && MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().visualEnabled();
+    }
+    public static void extract(GuiGraphicsExtractor g, DeltaTracker delta) {
+        if (shouldRender(Minecraft.getInstance())) HudRenderer.text(g, HUD_TEXT, MacePvPMod.HUD_CONFIG.current().attributeSwap(), 0);
+    }
     public static boolean validSound(String value) {
         Identifier id = Identifier.tryParse(value);
         return id != null && BuiltInRegistries.SOUND_EVENT.containsKey(id);

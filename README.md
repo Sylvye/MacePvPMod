@@ -2,8 +2,9 @@
 
 MacePvPMod is a client-only Fabric HUD and quality-of-life mod for Minecraft **26.2**, designed for mace PvP, elytra combat, and survival awareness. It provides configurable visual and audio feedback without changing gameplay mechanics, flight, server-side damage, targeting, or network packets.
 
-The mod includes four independent modules:
+The mod includes five modules:
 
+- **HUD** — central editor for overlay placement, size, colors, and previews.
 - **Elytra Pitch Bar** — a configurable on-screen pitch reference for repeatable elytra approaches and mace dives.
 - **Damage Counter** — displays accumulated fall distance and confirmed mace-hit damage, with reported and estimated calculation modes.
 - **Attribute Swaps** — gives visual and sound feedback when a hotbar selection changes the player’s active attack attributes.
@@ -31,12 +32,19 @@ Open **Mods → MacePvPMod → Configure**, or assign **Open MacePvPMod settings
 
 Select a module from the directory. Each has a separate settings page and configuration file.
 
+### HUD
+
+Select an element, then choose **Drag / resize preview**. Drag the text or bar to move it, drag its bottom-right handle to resize it, or use arrow keys to nudge it. The controls page also provides numeric offsets and size, per-element reset, and color pickers with hue, saturation/brightness, presets, and optional hex entry. The pitch bar has width, thickness, and opacity controls.
+
+Switch between **all elements** and **selected only** previews. Samples remain visible even when the corresponding module is disabled. The healing warning has separate low-health, low-saturation, and combined colors. Preview edits apply only after **Save**; **Cancel** discards them.
+
+HUD appearance is stored in `config/macepvpmod-hud.json`. Until this file exists, legacy module appearance settings are imported automatically. Existing module files remain intact. Saved HUD appearance takes precedence over their old appearance fields.
+
 ### Elytra Pitch Bar
 
-- **Basic:** enabled, width, thickness, opacity, and six-digit RGB color (`999999` is grey).
+- **Basic:** enabled and a shortcut to the HUD editor.
 - **Advanced:** target pitch, pixels per degree, maximum vertical travel, and third-person visibility.
-- **Preview pitch:** simulate looking up or down without entering a world. The preview always shows the appearance, even when the feature is disabled; its travel is clipped to the preview box.
-- **Save** applies and persists edits. **Cancel** or Escape discards them. **Reset defaults** resets both pages; Save applies the reset.
+- **Save** applies and persists edits. **Cancel** or Escape discards them. **Reset behavior defaults** resets both pages; Save applies the reset.
 
 Defaults: 100 GUI-pixel width, 1-pixel thickness, `999999` grey, 40% opacity, +40° target, 2 GUI pixels per degree, ±60 GUI pixels of travel.
 
@@ -46,13 +54,14 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 
 - **Fall distance:** appears only above 1.5 accumulated fall blocks, at 14 GUI pixels below the crosshair by default. Uses Minecraft's fall-distance accumulator, including its landing and movement resets.
 - **Mace hit damage:** choose **Damage: Reported** (default) or **Damage: Calculated**. Both show damage points (2 points = 1 heart) after a server-confirmed mace hit on a living entity, for 3 seconds by default.
-- Each feature has its own enable toggle, RGB color, text size (0.5–4×), and horizontal/vertical position relative to the crosshair. Hit duration is configurable from 1–10 seconds.
-- **Preview position** shows both enabled displays at their configured screen positions. Position sliders use GUI pixels; text is clamped inside the screen.
+- Each feature has its own enable toggle and message template. Hit duration is configurable from 1–10 seconds. Appearance is edited in **HUD**.
+- Fall defaults to `{blocks} blocks`; hit defaults to `{damage} damage`. Hit messages also support `{blocks}` for fall distance captured at attack time. Values use one decimal place. For example, `{damage} damage from {blocks} blocks` becomes `18.0 damage from 12.5 blocks`.
+- Variable insertion buttons, explanations, and live examples appear beside the fields. Blank messages and unsupported variables block saving. Each new hit replaces the previous hit message.
 - **Save** applies changes; **Cancel** or Escape discards them. Damage settings persist separately in `config/macepvpmod-damage.json`.
 
 **Reported** uses server health updates. A confirmed hit without a measurable health decrease displays **Damage unavailable**. Absorption damage is not included; overlapping damage from other sources may affect observed health loss.
 
-**Calculated** works without target health updates and is labeled `(calc)`. It snapshots the mace, fall distance, attack attribute, cooldown, and critical-hit conditions when attacking. It estimates raw outgoing damage before armor, toughness, Protection, Resistance, absorption, shields, or server modifications; Breach armor piercing is ignored. Target-specific enchantment bonuses such as Smite are not calculated. Both modes still require a server damage-event confirmation; calculated mode does not treat unconfirmed swings as successful hits.
+**Calculated** works without target health updates. The message has no added mode suffix. It snapshots the mace, fall distance, attack attribute, cooldown, and critical-hit conditions when attacking. It estimates raw outgoing damage before armor, toughness, Protection, Resistance, absorption, shields, or server modifications; Breach armor piercing is ignored. Target-specific enchantment bonuses such as Smite are not calculated. Both modes still require a server damage-event confirmation; calculated mode does not treat unconfirmed swings as successful hits.
 
 The Minecraft 26.2 formula, verified against the bundled `MaceItem` and `Player` implementations and `data/minecraft/enchantment/density.json`, is:
 
@@ -65,14 +74,15 @@ Existing configurations retain reported mode. Non-living targets are not tracked
 
 ### Attribute Swaps
 
-Detects an attribute-changing hotbar swap during combat and optionally shows an **Attribute swap!** overlay and plays a configurable sound. Visual and sound feedback can be controlled separately. The default sound is `minecraft:entity.experience_orb.pickup`.
+Detects an attribute-changing hotbar swap during combat and optionally shows an **Attribute swap!** HUD message for three seconds and plays a configurable sound. Visual and sound feedback can be controlled separately. The default sound is `minecraft:entity.experience_orb.pickup`. Move, resize, and color the text through **HUD → Attribute swap** or **Edit in HUD**. It appears in individual and global previews and does not use the actionbar.
 
 ### Survival instincts
 
 - **Totem warning:** displays a configurable alert when the player has a Totem of Undying in the inventory but the offhand is empty.
 - **Health and saturation warnings:** displays separate configurable messages for low health, low saturation, or both at once.
-- **Audio cues:** plays configurable harp and bass cues, with timing that can shorten as the condition becomes more urgent.
-- Text, colors, size, screen position, thresholds, volume, pitch, and timing are configurable.
+- **Audio cues:** an ordered playlist plays one entry per warning beat and loops. Add, remove, reorder, search, and preview registered sounds; each entry has volume and pitch controls. An empty playlist mutes warnings. Missing sound events are skipped and remain editable.
+- Low health increases volume and shortens the gap between beats. Existing harp/bass settings migrate into two playlist entries with their original volume and pitch.
+- Text, thresholds, and timing remain here; colors, size, and placement live in **HUD**. Playlist **Done** returns a draft; save Survival instincts to apply it.
 
 These alerts are hidden while viewing menus, spectating, dead, paused, or hiding the HUD. Configurations are stored in `config/macepvpmod-attribute-swaps.json` and `config/macepvpmod-survival.json`.
 

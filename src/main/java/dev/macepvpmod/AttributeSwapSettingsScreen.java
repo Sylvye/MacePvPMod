@@ -21,21 +21,22 @@ public final class AttributeSwapSettingsScreen extends Screen {
     }
     @Override protected void init() {
         int left = width / 2 - 150;
-        addRenderableWidget(Button.builder(Component.literal("Actionbar: " + (visual ? "On" : "Off")), b -> {
-            visual = !visual; b.setMessage(Component.literal("Actionbar: " + (visual ? "On" : "Off")));
+        addRenderableWidget(Button.builder(Component.literal("HUD text: " + (visual ? "On" : "Off")), b -> {
+            visual = !visual; b.setMessage(Component.literal("HUD text: " + (visual ? "On" : "Off")));
         }).bounds(left, 45, 146, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Sound: " + (sound ? "On" : "Off")), b -> {
             sound = !sound; b.setMessage(Component.literal("Sound: " + (sound ? "On" : "Off")));
         }).bounds(left + 154, 45, 146, 20).build());
-        EditBox input = new EditBox(font, left, 90, 300, 20, Component.literal("Minecraft sound ID"));
-        input.setMaxLength(256); input.setValue(soundId);
-        input.setResponder(value -> { soundId = value; updateValidity(); });
-        addRenderableWidget(input);
+        addRenderableWidget(Button.builder(Component.literal("Choose sound: " + SoundPlaylistScreen.name(soundId)), b ->
+                minecraft.gui.setScreen(new SoundSelectorScreen(this, soundId, value -> soundId = value)))
+                .bounds(left, 90, 300, 20).build());
         preview = addRenderableWidget(Button.builder(Component.literal("Test sound"), b -> AttributeSwaps.playSound(soundId))
                 .bounds(left, 120, 146, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Reset defaults"), b -> {
             read(AttributeSwapConfig.defaults()); error = ""; rebuildWidgets();
         }).bounds(left + 154, 120, 146, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Edit in HUD"), b -> minecraft.gui.setScreen(new HudSettingsScreen(this, 5)))
+                .bounds(left, 150, 300, 20).build());
         save = addRenderableWidget(Button.builder(Component.literal("Save"), b -> {
             try {
                 MacePvPMod.ATTRIBUTE_SWAP_CONFIG.save(new AttributeSwapConfig(1, visual, sound,
