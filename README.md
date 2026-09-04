@@ -18,13 +18,7 @@ Created by **Sylvye**. Source code: [github.com/Sylvye/MacePvPMod](https://githu
 2. Put `macepvpmod-1.0.0.jar` and **Fabric API 0.158.0+26.2** in your instance's `mods` folder.
 3. Optionally install **Mod Menu 20.0.1** for the configuration button.
 
-No server installation is needed. This mod provides information only; it does not change flight, damage, targeting, or network packets.
-
-## Use
-
-While gliding, aim toward the horizontal grey line. It aligns with the crosshair at **40° downward pitch**. Looking shallower places the line below your crosshair; looking steeper places it above. Movement is limited to a central region, so a line at the travel limit indicates direction rather than the full angular difference.
-
-40° is a configurable reference, not a guarantee of fall damage or mace damage. The guide hides while grounded, dead, spectating, viewing menus, or hiding the HUD with F1. First person is the default; holding a mace is not required.
+The mod is client-only
 
 ## Settings
 
