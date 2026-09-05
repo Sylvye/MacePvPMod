@@ -7,6 +7,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.core.component.DataComponents;
 
 public final class AttributeSwaps {
     private static final AttributeSwapTracker TRACKER = new AttributeSwapTracker();
@@ -27,11 +28,16 @@ public final class AttributeSwaps {
         Minecraft mc = Minecraft.getInstance();
         if (active(mc)) TRACKER.click(mc.player.getInventory().getSelectedSlot());
     }
+    public static void successfulHit() {
+        Minecraft mc = Minecraft.getInstance();
+        if (active(mc)) TRACKER.successfulHit();
+    }
     public static void selected(Inventory inventory, int slot) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || inventory != mc.player.getInventory()) return;
-        if (active(mc) && TRACKER.select(slot)) {
-            AttributeSwapConfig config = MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current();
+        AttributeSwapConfig config = MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current();
+        boolean weapon = !config.weaponOnly() || inventory.getItem(slot).has(DataComponents.WEAPON);
+        if (active(mc) && TRACKER.select(slot, config.successfulHitOnly(), weapon)) {
             if (config.visualEnabled()) displayTicks = 60;
             if (config.soundEnabled()) playSound(config.soundId());
         }

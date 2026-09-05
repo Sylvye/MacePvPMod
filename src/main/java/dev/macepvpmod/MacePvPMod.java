@@ -29,7 +29,10 @@ public final class MacePvPMod implements ClientModInitializer {
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
                 Identifier.fromNamespaceAndPath("macepvpmod", "damage_counter"), DamageHud::extract);
         net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
-            if (world.isClientSide() && player == net.minecraft.client.Minecraft.getInstance().player) DamageHud.attacked(entity);
+            if (world.isClientSide() && player == net.minecraft.client.Minecraft.getInstance().player) {
+                AttributeSwaps.successfulHit();
+                DamageHud.attacked(entity);
+            }
             return net.minecraft.world.InteractionResult.PASS;
         });
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,

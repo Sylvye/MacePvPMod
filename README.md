@@ -68,7 +68,7 @@ Existing configurations retain reported mode. Non-living targets are not tracked
 
 ### Attribute Swaps
 
-Detects an attribute-changing hotbar swap during combat and optionally shows an **Attribute swap!** HUD message for three seconds and plays a configurable sound. Visual and sound feedback can be controlled separately. The default sound is `minecraft:entity.experience_orb.pickup`. Move, resize, and color the text through **HUD → Attribute swap** or **Edit in HUD**. It appears in individual and global previews and does not use the actionbar.
+Detects an attribute-changing hotbar swap during combat and optionally shows an **Attribute swap!** HUD message for three seconds and plays a configurable sound. By default, it registers only after a successful hit and only when swapping to a weapon; both filters can be disabled. Visual and sound feedback can be controlled separately. The default sound is `minecraft:entity.experience_orb.pickup`. Move, resize, and color the text through **HUD → Attribute swap** or **Edit in HUD**. It appears in individual and global previews and does not use the actionbar.
 
 ### Survival instincts
 
