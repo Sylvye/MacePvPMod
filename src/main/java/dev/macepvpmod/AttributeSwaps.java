@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public final class AttributeSwaps {
     private static final AttributeSwapTracker TRACKER = new AttributeSwapTracker();
@@ -15,6 +16,9 @@ public final class AttributeSwaps {
     private static int displayTicks;
     private static Object player;
     private static Object level;
+    private static double attackDamage;
+    private static float attackCooldown;
+    private static boolean attackSnapshot;
     private static boolean active(Minecraft mc) {
         if (player != mc.player || level != mc.level) {
             displayTicks = 0; TRACKER.reset(); player = mc.player; level = mc.level;
@@ -26,24 +30,37 @@ public final class AttributeSwaps {
     }
     public static void click() {
         Minecraft mc = Minecraft.getInstance();
-        if (active(mc)) TRACKER.click(mc.player.getInventory().getSelectedSlot());
+        if (active(mc)) {
+            TRACKER.click(mc.player.getInventory().getSelectedSlot());
+            attackDamage = mc.player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            attackCooldown = mc.player.getAttackStrengthScale(0.5f);
+            attackSnapshot = true;
+        }
     }
     public static void successfulHit() {
         Minecraft mc = Minecraft.getInstance();
-        if (active(mc)) TRACKER.successfulHit();
+        if (active(mc) && TRACKER.successfulHit()) register();
     }
     public static void selected(Inventory inventory, int slot) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || inventory != mc.player.getInventory()) return;
         AttributeSwapConfig config = MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current();
         boolean weapon = !config.weaponOnly() || inventory.getItem(slot).has(DataComponents.WEAPON);
-        if (active(mc) && TRACKER.select(slot, config.successfulHitOnly(), weapon)) {
-            if (config.visualEnabled()) displayTicks = 60;
-            if (config.soundEnabled()) playSound(config.soundId());
-        }
+        if (active(mc) && TRACKER.select(slot, config.successfulHitOnly(), weapon)) register();
+    }
+    private static void register() {
+        AttributeSwapConfig config = MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current();
+        if (config.visualEnabled()) displayTicks = 60;
+        if (config.soundEnabled()) playSound(config.soundId());
+    }
+    static double attackDamage(Minecraft mc) {
+        return attackSnapshot ? attackDamage : mc.player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+    }
+    static float attackCooldown(Minecraft mc) {
+        return attackSnapshot ? attackCooldown : mc.player.getAttackStrengthScale(0.5f);
     }
     public static void endTick() {
-        TRACKER.reset();
+        TRACKER.reset(); attackSnapshot = false;
         var mc = Minecraft.getInstance();
         if (player != mc.player || level != mc.level || mc.player == null || !mc.player.isAlive()
                 || mc.player.isSpectator() || !MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().visualEnabled()) {

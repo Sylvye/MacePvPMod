@@ -30,7 +30,12 @@ class AttributeSwapTrackerTest {
         var tracker = new AttributeSwapTracker();
         tracker.click(0);
         assertFalse(tracker.select(1, true, true));
-        tracker.successfulHit();
+        assertTrue(tracker.successfulHit());
+    }
+    @Test void successfulHitBeforeSwapAlsoRegisters() {
+        var tracker = new AttributeSwapTracker();
+        tracker.click(0);
+        assertFalse(tracker.successfulHit());
         assertTrue(tracker.select(1, true, true));
     }
     @Test void destinationCanBeRequiredToBeAWeapon() {
