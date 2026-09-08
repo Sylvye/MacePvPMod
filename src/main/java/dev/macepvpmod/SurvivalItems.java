@@ -23,7 +23,11 @@ final class SurvivalItems {
             if (stack.isEmpty()) continue;
             totem |= stack.is(Items.TOTEM_OF_UNDYING);
             var key = rule(stack);
-            heal |= healing.contains(key); food |= saturation.contains(key);
+            heal |= healing.contains(key);
+            if (saturation.contains(key)) {
+                var properties = stack.get(DataComponents.FOOD);
+                food |= properties != null && player.canEat(properties.canAlwaysEat());
+            }
         }
         return new Availability(totem, heal, food);
     }

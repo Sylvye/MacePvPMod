@@ -35,7 +35,12 @@ public final class SurvivalItemsSmokeTest implements FabricClientGameTest {
                 check(SurvivalItems.scan(p, c).healing(), "Lingering regeneration not detected");
                 p.getInventory().setItem(0, ItemStack.EMPTY);
                 p.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.COOKED_BEEF));
+                p.getFoodData().setFoodLevel(19);
                 check(SurvivalItems.scan(p, c).saturation(), "Offhand food not detected");
+                p.getFoodData().setFoodLevel(20);
+                check(!SurvivalItems.scan(p, c).saturation(), "Food qualifies while player is full");
+                p.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.GOLDEN_APPLE));
+                check(SurvivalItems.scan(p, c).saturation(), "Always-edible food not detected while full");
                 p.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
                 check(!SurvivalItems.scan(p, c).saturation(), "Consumed food still counted");
                 p.getInventory().setItem(10, new ItemStack(Items.TOTEM_OF_UNDYING));
