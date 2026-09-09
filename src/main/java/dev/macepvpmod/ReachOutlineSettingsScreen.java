@@ -19,7 +19,7 @@ public final class ReachOutlineSettingsScreen extends Screen {
             public void onPress(Button b){enabled=!enabled;b.setMessage(Component.literal("Enabled: "+(enabled?"On":"Off")));}
         }).bounds(x,42,w,20).build());
         var alpha=SettingsControls.slider("Intensity",intensity,.02,1,.01,w,v->intensity=v); alpha.setPosition(x,68); addRenderableWidget(alpha);
-        var thick=SettingsControls.slider("Thickness",thickness,1,5,1,w,v->thickness=(int)v); thick.setPosition(x,94); addRenderableWidget(thick);
+        var thick=SettingsControls.slider("Thickness",thickness,1,ReachOutlineConfig.MAX_THICKNESS,1,w,v->thickness=(int)v); thick.setPosition(x,94); addRenderableWidget(thick);
         addRenderableWidget(Button.builder(Component.literal(String.format("Color: #%06X",color)),b->minecraft.gui.setScreen(new ColorPickerScreen(this,color,c->{color=c;rebuildWidgets();}))).bounds(x,120,w,20).build());
         addRenderableWidget(Button.builder(Component.literal("Reset defaults"),b->{var c=ReachOutlineConfig.defaults();enabled=c.enabled();color=c.color();intensity=c.intensity();thickness=c.thickness();rebuildWidgets();}).bounds(x,146,w,20).build());
         addRenderableWidget(Button.builder(Component.literal("Save"),b->{try{MacePvPMod.REACH_OUTLINE_CONFIG.save(new ReachOutlineConfig(1,enabled,color,intensity,thickness));onClose();}catch(IOException e){error="Couldn't save. Check config folder permissions.";}}).bounds(x,height-28,(w-8)/2,20).build());
