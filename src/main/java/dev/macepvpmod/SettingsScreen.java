@@ -16,6 +16,7 @@ public final class SettingsScreen extends Screen {
         rows.addChild(Button.builder(Component.literal("Attribute Swaps"), b -> minecraft.gui.setScreen(new AttributeSwapSettingsScreen(this))).bounds(0, 0, 220, 24).build());
         rows.addChild(Button.builder(Component.literal("Survival instincts"), b -> minecraft.gui.setScreen(new SurvivalSettingsScreen(this))).bounds(0, 0, 220, 24).build());
         rows.addChild(Button.builder(Component.literal("HUD"), b -> minecraft.gui.setScreen(new HudSettingsScreen(this, 0))).bounds(0, 0, 220, 24).build());
+        rows.addChild(Button.builder(Component.literal("Reach Outlines"), b -> minecraft.gui.setScreen(new ReachOutlineSettingsScreen(this))).bounds(0, 0, 220, 24).build());
         var scroll = new net.minecraft.client.gui.components.ScrollableLayout(minecraft, rows, Math.max(32, height - 86));
         scroll.setMinWidth(220); scroll.arrangeElements(); scroll.setX((width - scroll.getWidth()) / 2); scroll.setY(42);
         scroll.visitWidgets(this::addRenderableWidget);

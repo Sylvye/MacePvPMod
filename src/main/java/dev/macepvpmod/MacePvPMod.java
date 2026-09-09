@@ -16,6 +16,7 @@ public final class MacePvPMod implements ClientModInitializer {
     public static final AttributeSwapConfigStore ATTRIBUTE_SWAP_CONFIG = new AttributeSwapConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-attribute-swaps.json"));
     public static final SurvivalConfigStore SURVIVAL_CONFIG = new SurvivalConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-survival.json"));
     public static final HudConfigStore HUD_CONFIG = new HudConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-hud.json"));
+    public static final ReachOutlineConfigStore REACH_OUTLINE_CONFIG = new ReachOutlineConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-reach-outlines.json"));
     @Override public void onInitializeClient() {
         CONFIG.load();
         SURVIVAL_CONFIG.load();
@@ -24,6 +25,8 @@ public final class MacePvPMod implements ClientModInitializer {
         ATTRIBUTE_SWAP_CONFIG.load();
         DAMAGE_CONFIG.load();
         HUD_CONFIG.load();
+        REACH_OUTLINE_CONFIG.load();
+        ReachOutlines.register();
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
                 Identifier.fromNamespaceAndPath("macepvpmod", "attribute_swap"), AttributeSwaps::extract);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
