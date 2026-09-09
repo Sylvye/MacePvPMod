@@ -15,8 +15,11 @@ public final class HudSmokeTest implements FabricClientGameTest {
             context.runOnClient(mc -> {
                 var p = mc.player;
                 var defaults = PitchConfig.defaults();
+                int swapSlot = (p.getInventory().getSelectedSlot() + 1) % 9;
+                p.getInventory().setItem(swapSlot, new ItemStack(Items.NETHERITE_SWORD));
                 AttributeSwaps.click();
-                AttributeSwaps.selected(p.getInventory(), (p.getInventory().getSelectedSlot() + 1) % 9);
+                AttributeSwaps.successfulHit();
+                AttributeSwaps.selected(p.getInventory(), swapSlot);
                 check(AttributeSwaps.shouldRender(mc), "Swap should show HUD text");
                 mc.gui.hud.toggle(); check(!AttributeSwaps.shouldRender(mc), "F1 must hide swap HUD"); mc.gui.hud.toggle();
                 mc.gui.setScreen(new SettingsScreen(null)); check(!AttributeSwaps.shouldRender(mc), "Menus must hide swap HUD"); mc.gui.setScreen(null);
@@ -53,6 +56,16 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 p.setSprinting(true); p.fallDistance = 8;
                 var plain = new ItemStack(Items.MACE);
                 p.setItemSlot(EquipmentSlot.MAINHAND, plain);
+                check(Math.abs(MaceDamageCalculator.effectiveAttackDamage(p) - 6) < .001,
+                        "Mace attack damage should include its +5 modifier");
+                var sword = new ItemStack(Items.NETHERITE_SWORD);
+                p.setItemSlot(EquipmentSlot.MAINHAND, sword);
+                check(Math.abs(MaceDamageCalculator.effectiveAttackDamage(p) - 8) < .001,
+                        "Netherite sword attack damage should include its +7 modifier");
+                AttributeSwaps.click();
+                p.setItemSlot(EquipmentSlot.MAINHAND, plain);
+                check(Math.abs(AttributeSwaps.attackDamage(mc) - 8) < .001,
+                        "Attack snapshot should preserve the pre-swap weapon damage");
                 double base = MaceDamageCalculator.atAttack(p);
                 var enchantments = mc.level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
                 var dense = new ItemStack(Items.MACE);
@@ -93,9 +106,13 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 check(Math.abs(FallCounter.distance(p) - (startY - p.getY())) < 1e-6, "Glide counter must track actual movement");
                 check(DamageHud.showFall(FallCounter.distance(p)), "Shallow glide must appear after 1.5 actual blocks");
                 check(p.fallDistance <= 1, "Vanilla shallow-glide damage distance should still be capped");
+                p.resetFallDistance();
+                check(FallCounter.distance(p) == 0, "Vanilla fall-distance resets must reset the HUD counter");
+                p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -0.5, 0));
+                check(Math.abs(FallCounter.distance(p) - .5) < 1e-6, "Movement after a vanilla reset must start a new descent");
                 p.stopFallFlying();
                 p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -1, 0));
-                check(Math.abs(FallCounter.distance(p) - 3) < 1e-6, "Leaving elytra must preserve descent");
+                check(Math.abs(FallCounter.distance(p) - 1.5) < 1e-6, "Leaving elytra must preserve descent");
                 p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, .2, 0));
                 check(FallCounter.distance(p) == 0, "Ascending must start a new descent");
                 p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -2, 0));

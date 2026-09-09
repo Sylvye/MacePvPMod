@@ -1,10 +1,20 @@
 package dev.macepvpmod;
 
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.enchantment.Enchantments;
 
 final class MaceDamageCalculator {
     private MaceDamageCalculator() {}
+    static double effectiveAttackDamage(Player player) {
+        double base = player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
+        ItemAttributeModifiers modifiers = player.getMainHandItem().getOrDefault(
+                DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        return modifiers.compute(Attributes.ATTACK_DAMAGE, base, EquipmentSlot.MAINHAND);
+    }
     static double atAttack(Player player) {
         int density = 0;
         for (var entry : player.getMainHandItem().getEnchantments().entrySet()) {

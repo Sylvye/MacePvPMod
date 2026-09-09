@@ -30,4 +30,9 @@ class MaceDamageMathTest {
         assertEquals(72, MaceDamageMath.calculate(6, 1, 8, false, 5, true));
         assertEquals(9, MaceDamageMath.calculate(6, 1, 1, false, 5, true));
     }
+    @Test void weaponAttributeValuesFeedBaseAndCriticalDamage() {
+        assertEquals(6, MaceDamageMath.calculate(6, 1, 0, false, 0, false));
+        assertEquals(8, MaceDamageMath.calculate(8, 1, 0, false, 0, false));
+        assertEquals(9, MaceDamageMath.calculate(6, 1, 0, false, 0, true));
+    }
 }

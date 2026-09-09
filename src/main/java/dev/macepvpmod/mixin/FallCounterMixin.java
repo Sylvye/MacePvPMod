@@ -25,4 +25,9 @@ public abstract class FallCounterMixin {
         if ((Object)this instanceof LocalPlayer player && player == Minecraft.getInstance().player)
             FallCounter.moved(player, player.getY() - macepvpmod$beforeMoveY);
     }
+    @Inject(method = "resetFallDistance", at = @At("TAIL"))
+    private void macepvpmod$resetFallCounter(CallbackInfo ci) {
+        if ((Object)this instanceof LocalPlayer player && player == Minecraft.getInstance().player)
+            FallCounter.reset();
+    }
 }

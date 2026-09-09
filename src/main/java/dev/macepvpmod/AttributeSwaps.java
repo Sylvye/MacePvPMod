@@ -8,7 +8,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public final class AttributeSwaps {
     private static final AttributeSwapTracker TRACKER = new AttributeSwapTracker();
@@ -32,7 +31,7 @@ public final class AttributeSwaps {
         Minecraft mc = Minecraft.getInstance();
         if (active(mc)) {
             TRACKER.click(mc.player.getInventory().getSelectedSlot());
-            attackDamage = mc.player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            attackDamage = MaceDamageCalculator.effectiveAttackDamage(mc.player);
             attackCooldown = mc.player.getAttackStrengthScale(0.5f);
             attackSnapshot = true;
         }
@@ -54,7 +53,7 @@ public final class AttributeSwaps {
         if (config.soundEnabled()) playSound(config.soundId());
     }
     static double attackDamage(Minecraft mc) {
-        return attackSnapshot ? attackDamage : mc.player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        return attackSnapshot ? attackDamage : MaceDamageCalculator.effectiveAttackDamage(mc.player);
     }
     static float attackCooldown(Minecraft mc) {
         return attackSnapshot ? attackCooldown : mc.player.getAttackStrengthScale(0.5f);
