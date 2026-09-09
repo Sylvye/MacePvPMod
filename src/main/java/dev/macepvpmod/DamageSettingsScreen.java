@@ -7,24 +7,27 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 public final class DamageSettingsScreen extends Screen {
     private final Screen parent;private final DamageConfig original;
-    private boolean fall,hit,calculated;private double fallThreshold;private int seconds;private String fallText,hitText,error="";private Button save;
+    private boolean fall,hit,calculated;private double fallThreshold;private int seconds;private String fallText,hitText,error="";private Button save;private ColorScale fallColors,hitColors;
     public DamageSettingsScreen(Screen parent){super(Component.literal("Damage Counter"));this.parent=parent;original=MacePvPMod.DAMAGE_CONFIG.current();read(original);}
-    private void read(DamageConfig c){fall=c.fallEnabled();hit=c.hitEnabled();calculated=c.calculatedDamage();fallThreshold=c.fallThreshold();seconds=c.hitSeconds();fallText=c.fallTemplate();hitText=c.hitTemplate();}
+    private void read(DamageConfig c){fall=c.fallEnabled();hit=c.hitEnabled();calculated=c.calculatedDamage();fallThreshold=c.fallThreshold();seconds=c.hitSeconds();fallText=c.fallTemplate();hitText=c.hitTemplate();fallColors=c.fallColors();hitColors=c.hitColors();}
     private String validation(){String e=DamageText.error(fallText,false);return e.isEmpty()?DamageText.error(hitText,true):e;}
     protected void init(){int w=Math.min(420,width-32);var rows=LinearLayout.vertical().spacing(6);
         rows.addChild(Button.builder(Component.literal("Fall distance: "+(fall?"On":"Off")),b->{fall=!fall;rebuildWidgets();}).bounds(0,0,w,20).build());
         rows.addChild(SettingsControls.slider("Fall threshold (blocks)",fallThreshold,0,20,.1,w,v->fallThreshold=v));
         template(rows,false,w);
+        rows.addChild(Button.builder(Component.literal("Fall colors: "+mode(fallColors)),b->minecraft.gui.setScreen(new ColorScaleEditorScreen(this,"Fall distance",fallColors,c->{fallColors=c;rebuildWidgets();}))).bounds(0,0,w,20).build());
         rows.addChild(Button.builder(Component.literal("Hit damage: "+(hit?"On":"Off")),b->{hit=!hit;rebuildWidgets();}).bounds(0,0,w,20).build());
         template(rows,true,w);
+        rows.addChild(Button.builder(Component.literal("Hit colors: "+mode(hitColors)),b->minecraft.gui.setScreen(new ColorScaleEditorScreen(this,"Hit damage",hitColors,c->{hitColors=c;rebuildWidgets();}))).bounds(0,0,w,20).build());
         rows.addChild(SettingsControls.slider("Hit seconds",seconds,1,10,1,w,v->seconds=(int)v));
         rows.addChild(Button.builder(Component.literal("Damage: "+(calculated?"Calculated":"Reported")),b->{calculated=!calculated;rebuildWidgets();}).bounds(0,0,w,20).tooltip(Tooltip.create(Component.literal("Reported: server health lost. Calculated: raw damage before defenses."))).build());
         rows.addChild(Button.builder(Component.literal("Edit appearance in HUD"),b->minecraft.gui.setScreen(new HudSettingsScreen(this,1))).bounds(0,0,w,20).build());
         rows.addChild(Button.builder(Component.literal("Reset defaults"),b->{read(DamageConfig.defaults());rebuildWidgets();}).bounds(0,0,w,20).build());
         var scroll=new ScrollableLayout(minecraft,rows,Math.max(40,height-78));scroll.setMinWidth(w);scroll.arrangeElements();scroll.setX((width-scroll.getWidth())/2);scroll.setY(30);scroll.visitWidgets(this::addRenderableWidget);
-        save=addRenderableWidget(Button.builder(Component.literal("Save"),b->{try{MacePvPMod.DAMAGE_CONFIG.save(new DamageConfig(1,fall,original.fallColor(),original.fallSize(),original.fallX(),original.fallY(),hit,original.hitColor(),original.hitSize(),original.hitX(),original.hitY(),seconds,calculated,fallText,hitText,fallThreshold));onClose();}catch(IOException e){error="Could not save settings.";}}).bounds(width/2-104,height-26,100,20).build());save.active=validation().isEmpty();
+        save=addRenderableWidget(Button.builder(Component.literal("Save"),b->{try{MacePvPMod.DAMAGE_CONFIG.save(new DamageConfig(1,fall,original.fallColor(),original.fallSize(),original.fallX(),original.fallY(),hit,original.hitColor(),original.hitSize(),original.hitX(),original.hitY(),seconds,calculated,fallText,hitText,fallThreshold,fallColors,hitColors));onClose();}catch(IOException e){error="Could not save settings.";}}).bounds(width/2-104,height-26,100,20).build());save.active=validation().isEmpty();
         addRenderableWidget(Button.builder(Component.literal("Cancel"),b->onClose()).bounds(width/2+4,height-26,100,20).build());
     }
+    private static String mode(ColorScale scale){return scale.mode()==ColorMode.FLAT?"Flat":"Gradient";}
     private void template(LinearLayout rows,boolean isHit,int w){
         rows.addChild(new StringWidget(Component.literal(isHit?"{damage}: hit damage • {blocks}: fall at attack":"{blocks}: current fall distance"),font));
         var box=new EditBox(font,0,0,w,20,Component.literal(isHit?"Hit message":"Fall message"));box.setMaxLength(160);box.setValue(isHit?hitText:fallText);

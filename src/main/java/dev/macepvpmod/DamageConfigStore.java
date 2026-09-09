@@ -24,11 +24,14 @@ public final class DamageConfigStore {
             for (var entry : saved.entrySet()) {
                 if (merged.has(entry.getKey())) {
                     JsonElement value = entry.getValue();
-                    JsonPrimitive expected = merged.getAsJsonPrimitive(entry.getKey());
-                    if (!value.isJsonPrimitive()) throw new JsonParseException("Invalid " + entry.getKey());
-                    JsonPrimitive actual = value.getAsJsonPrimitive();
-                    if (expected.isBoolean() != actual.isBoolean() || expected.isNumber() != actual.isNumber())
-                        throw new JsonParseException("Invalid type for " + entry.getKey());
+                    JsonElement expected = merged.get(entry.getKey());
+                    if (expected.isJsonPrimitive() != value.isJsonPrimitive()
+                            || expected.isJsonObject() != value.isJsonObject()
+                            || expected.isJsonArray() != value.isJsonArray()) throw new JsonParseException("Invalid type for " + entry.getKey());
+                    if (expected.isJsonPrimitive()) {
+                        JsonPrimitive e=expected.getAsJsonPrimitive(),a=value.getAsJsonPrimitive();
+                        if(e.isBoolean()!=a.isBoolean()||e.isNumber()!=a.isNumber()||e.isString()!=a.isString()) throw new JsonParseException("Invalid type for "+entry.getKey());
+                    }
                     merged.add(entry.getKey(), value);
                 }
             }

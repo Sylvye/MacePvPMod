@@ -13,7 +13,7 @@ public final class DamageHud {
     private static float before;
     private static int pendingTicks, displayTicks;
     private static boolean confirmed, calculated;
-    private static double calculatedAmount, attackBlocks;
+    private static double calculatedAmount, attackBlocks, hitAmount=Double.NaN;
     private static String hit = "";
     private static Object level;
     private DamageHud() {}
@@ -45,15 +45,15 @@ public final class DamageHud {
         pendingTicks--;
         float damage = before - target.getHealth();
         if (confirmed && calculated) {
-            show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(), attackBlocks, calculatedAmount)); target = null;
+            show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(), attackBlocks, calculatedAmount),calculatedAmount); target = null;
         } else if (confirmed && damage > 0) {
-            show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(), attackBlocks, damage)); target = null;
+            show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(), attackBlocks, damage),damage); target = null;
         } else if (pendingTicks <= 0) {
-            if (confirmed) show("Damage unavailable");
+            if (confirmed) show("Damage unavailable",Double.NaN);
             target = null;
         }
     }
-    private static void show(String text) { hit = text; displayTicks = MacePvPMod.DAMAGE_CONFIG.current().hitSeconds() * 20; }
+    private static void show(String text,double amount) { hit = text;hitAmount=amount;displayTicks = MacePvPMod.DAMAGE_CONFIG.current().hitSeconds() * 20; }
     static String visibleHit() { return displayTicks > 0 ? hit : ""; }
     static boolean showFall(double distance) { return showFall(distance, 1.5); }
     static boolean showFall(double distance, double threshold) {
@@ -66,7 +66,7 @@ public final class DamageHud {
         var c = MacePvPMod.DAMAGE_CONFIG.current();
         double fallBlocks = FallCounter.distance(p);
         if (c.fallEnabled() && showFall(fallBlocks, c.fallThreshold()))
-            HudRenderer.text(g, DamageText.format(c.fallTemplate(), fallBlocks, 0), MacePvPMod.HUD_CONFIG.current().fall(), 0);
-        if (c.hitEnabled() && displayTicks > 0) HudRenderer.text(g, hit, MacePvPMod.HUD_CONFIG.current().hit(), 0);
+            HudRenderer.textColor(g, DamageText.format(c.fallTemplate(), fallBlocks, 0), MacePvPMod.HUD_CONFIG.current().fall(), c.fallColors().color(fallBlocks));
+        if (c.hitEnabled() && displayTicks > 0) HudRenderer.textColor(g, hit, MacePvPMod.HUD_CONFIG.current().hit(), c.hitColors().color(hitAmount));
     }
 }

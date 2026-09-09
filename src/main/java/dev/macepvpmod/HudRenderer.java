@@ -15,9 +15,12 @@ final class HudRenderer {
         return bounds(s,font.width(text)*scale,font.lineHeight*scale,w,h);
     }
     static Bounds text(GuiGraphicsExtractor g,String text,HudStyle s,int state) {
+        int color=state==2?s.secondaryColor():state==3?s.combinedColor():s.color();
+        return textColor(g,text,s,color);
+    }
+    static Bounds textColor(GuiGraphicsExtractor g,String text,HudStyle s,int color) {
         var b=textBounds(text,s,g.guiWidth(),g.guiHeight());
         float scale=(float)(b.height()/Minecraft.getInstance().font.lineHeight);
-        int color=state==2?s.secondaryColor():state==3?s.combinedColor():s.color();
         g.pose().pushMatrix();g.pose().translate((float)b.x(),(float)b.y());g.pose().scale(scale,scale);
         g.text(Minecraft.getInstance().font,text,0,0,0xff000000|color);g.pose().popMatrix();return b;
     }

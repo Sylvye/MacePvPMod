@@ -44,4 +44,15 @@ class DamageConfigStoreTest {
         assertEquals(100, new DamageConfig(1, true, 0xffffff, 1, 0, 14, true, 0xff6666, 1, 0, 28, 3,
                 false, "{blocks} blocks", "{damage} damage", 200).validated().fallThreshold());
     }
+    @Test void colorScalesRoundTripAndLegacyFilesAdoptDefaults() throws Exception {
+        var file=directory.resolve("damage.json");
+        Files.writeString(file,"{\"fallColor\":1193046,\"hitColor\":6636321}");
+        var store=new DamageConfigStore(file);store.load();
+        assertEquals(ColorScale.flat(0xffffff),store.current().fallColors());
+        assertEquals(ColorScale.damageDefault(),store.current().hitColors());
+        var custom=new ColorScale(ColorMode.GRADIENT,0xabcdef,-10,10,
+                java.util.List.of(new GradientKey(0,0),new GradientKey(.4,0x112233),new GradientKey(1,0xffffff)));
+        var d=store.current();var changed=new DamageConfig(1,d.fallEnabled(),d.fallColor(),d.fallSize(),d.fallX(),d.fallY(),d.hitEnabled(),d.hitColor(),d.hitSize(),d.hitX(),d.hitY(),d.hitSeconds(),d.calculatedDamage(),d.fallTemplate(),d.hitTemplate(),d.fallThreshold(),custom,d.hitColors());
+        store.save(changed);var loaded=new DamageConfigStore(file);loaded.load();assertEquals(custom,loaded.current().fallColors());
+    }
 }
