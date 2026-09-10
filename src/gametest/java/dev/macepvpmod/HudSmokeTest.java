@@ -95,29 +95,30 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 p.setPos(p.getX(), p.getY() + 40, p.getZ());
                 p.setOnGround(false); p.startFallFlying(); p.setXRot(40); p.xRotO = 40;
                 check(PitchHud.shouldRender(mc, defaults), "Gliding guide should be visible");
-                FallCounter.reset();
+                p.resetFallDistance();
                 p.getAbilities().flying = false;
-                double startY = p.getY();
                 for (int i = 0; i < 20; i++) {
                     p.setDeltaMovement(0, -.1, 0);
                     p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -.1, 0));
                     p.checkFallDistanceAccumulation();
                 }
-                check(Math.abs(FallCounter.distance(p) - (startY - p.getY())) < 1e-6, "Glide counter must track actual movement");
-                check(DamageHud.showFall(FallCounter.distance(p)), "Shallow glide must appear after 1.5 actual blocks");
-                check(p.fallDistance <= 1, "Vanilla shallow-glide damage distance should still be capped");
+                check(p.fallDistance <= 1, "Shallow elytra descent must be capped at one block");
+                check(!DamageHud.showFall(p.fallDistance), "Shallow elytra descent must stay hidden");
                 p.resetFallDistance();
-                check(FallCounter.distance(p) == 0, "Vanilla fall-distance resets must reset the HUD counter");
-                p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -0.5, 0));
-                check(Math.abs(FallCounter.distance(p) - .5) < 1e-6, "Movement after a vanilla reset must start a new descent");
+                check(p.fallDistance == 0, "Vanilla fall-distance resets must reset the HUD counter");
                 p.stopFallFlying();
+                p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -0.5, 0));
+                check(Math.abs(p.fallDistance - .5) < 1e-6, "Normal falling must accumulate downward movement");
                 p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -1, 0));
-                check(Math.abs(FallCounter.distance(p) - 1.5) < 1e-6, "Leaving elytra must preserve descent");
-                p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, .2, 0));
-                check(FallCounter.distance(p) == 0, "Ascending must start a new descent");
+                check(Math.abs(p.fallDistance - 1.5) < 1e-6, "Normal fall distance must continue accumulating");
+                mc.getConnection().handleMovePlayer(new net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket(
+                        1, net.minecraft.world.entity.PositionMoveRotation.of(p), java.util.Set.of()));
+                check(p.fallDistance == 0, "A server teleport must reset fall distance");
                 p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -2, 0));
-                p.setOnGround(true); FallCounter.tick(p);
-                check(FallCounter.distance(p) == 0, "Landing must reset descent");
+                check(Math.abs(p.fallDistance - 2) < 1e-6, "Falling after teleport must restart from zero");
+                p.setOnGround(true);
+                p.move(net.minecraft.world.entity.MoverType.SELF, net.minecraft.world.phys.Vec3.ZERO);
+                check(p.fallDistance == 0, "Landing must reset fall distance");
                 p.setOnGround(false); p.startFallFlying();
                 mc.gui.hud.toggle(); check(!PitchHud.shouldRender(mc, defaults), "F1 should hide guide"); mc.gui.hud.toggle();
                 mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);

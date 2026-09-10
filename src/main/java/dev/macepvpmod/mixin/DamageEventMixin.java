@@ -1,6 +1,7 @@
 package dev.macepvpmod.mixin;
 
 import dev.macepvpmod.DamageHud;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,7 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class DamageEventMixin {
     @Inject(method = "handleMovePlayer", at = @At("TAIL"))
     private void macepvpmod$positionReset(net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
-        dev.macepvpmod.FallCounter.reset();
+        var player = Minecraft.getInstance().player;
+        if (player != null) player.resetFallDistance();
     }
     @Inject(method = "handleDamageEvent", at = @At("TAIL"))
     private void macepvpmod$damage(ClientboundDamageEventPacket packet, CallbackInfo ci) {

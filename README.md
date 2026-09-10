@@ -46,10 +46,10 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 
 ### Damage Counter
 
-- **Fall distance:** appears above the configurable **Fall threshold (blocks)**, set to 1.5 by default, at 14 GUI pixels below the crosshair. Measures actual downward movement, including slow elytra descents. Ascending, landing, entering water/lava, climbing, riding, creative flight, respawning, or server position corrections reset the counter. Level flight preserves the current descent; toggling elytra alone does not reset it.
+- **Fall distance:** appears above the configurable **Fall threshold (blocks)**, set to 1.5 by default, at 14 GUI pixels below the crosshair. Shows Minecraft's damage-relevant fall distance. Slow elytra descents are capped at 1 block by vanilla and remain hidden at the default threshold. Vanilla fall-ending conditions and server teleports or position corrections reset the counter.
 - **Mace hit damage:** choose **Damage: Reported** (default) or **Damage: Calculated**. Both show damage points (2 points = 1 heart) after a server-confirmed mace hit on a living entity, for 3 seconds by default.
 - Each feature has its own enable toggle and message template. Hit duration is configurable from 1–10 seconds. Appearance is edited in **HUD**.
-- Fall defaults to `{blocks} blocks`; hit defaults to `{damage} damage`. Hit messages also support `{blocks}` for Minecraft’s damage-related fall distance captured at attack time. This can be smaller than the physical descent shown by the fall counter during slow elytra flight. Values use one decimal place. For example, `{damage} damage from {blocks} blocks` becomes `18.0 damage from 12.5 blocks`.
+- Fall defaults to `{blocks} blocks`; hit defaults to `{damage} damage`. Hit messages also support `{blocks}` for the same Minecraft fall distance captured at attack time. Values use one decimal place. For example, `{damage} damage from {blocks} blocks` becomes `18.0 damage from 12.5 blocks`.
 - Variable insertion buttons, explanations, and live examples appear beside the fields. Blank messages and unsupported variables block saving. Each new hit replaces the previous hit message.
 - **Save** applies changes; **Cancel** or Escape discards them. Damage settings persist separately in `config/macepvpmod-damage.json`.
 

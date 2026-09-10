@@ -34,9 +34,7 @@ public final class DamageHud {
                 && packet.sourceCauseId() == mc.player.getId()) confirmed = true;
     }
     public static void tick(Minecraft mc) {
-        FallCounter.tick(mc.player);
         if (mc.level != level || mc.player == null || !mc.player.isAlive()) {
-            FallCounter.reset();
             level = mc.level; target = null; displayTicks = 0; hit = ""; return;
         }
         if (displayTicks > 0) displayTicks--;
@@ -64,7 +62,7 @@ public final class DamageHud {
         if (p == null || mc.level == null || mc.gui.screen() != null || mc.gui.hud.isHidden()
                 || !p.isAlive() || p.isSpectator()) return;
         var c = MacePvPMod.DAMAGE_CONFIG.current();
-        double fallBlocks = FallCounter.distance(p);
+        double fallBlocks = p.fallDistance;
         if (c.fallEnabled() && showFall(fallBlocks, c.fallThreshold()))
             HudRenderer.textColor(g, DamageText.format(c.fallTemplate(), fallBlocks, 0), MacePvPMod.HUD_CONFIG.current().fall(), c.fallColors().color(fallBlocks));
         if (c.hitEnabled() && displayTicks > 0) HudRenderer.textColor(g, hit, MacePvPMod.HUD_CONFIG.current().hit(), c.hitColors().color(hitAmount));

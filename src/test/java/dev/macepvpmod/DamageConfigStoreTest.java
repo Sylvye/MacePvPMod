@@ -39,6 +39,9 @@ class DamageConfigStoreTest {
         assertTrue(DamageHud.showFall(2, 1.5));
         assertFalse(DamageHud.showFall(1.5, 1.5));
         assertFalse(DamageHud.showFall(1, 1.5));
+        assertFalse(DamageHud.showFall(Double.NaN, 1.5));
+        assertFalse(DamageHud.showFall(Double.POSITIVE_INFINITY, 1.5));
+        assertFalse(DamageHud.showFall(2, Double.NaN));
         assertEquals(0, new DamageConfig(1, true, 0xffffff, 1, 0, 14, true, 0xff6666, 1, 0, 28, 3,
                 false, "{blocks} blocks", "{damage} damage", -4).validated().fallThreshold());
         assertEquals(100, new DamageConfig(1, true, 0xffffff, 1, 0, 14, true, 0xff6666, 1, 0, 28, 3,

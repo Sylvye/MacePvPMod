@@ -47,10 +47,10 @@ Limits: Vulkan was not tested. Actual window resizing, spectator mode, the unbou
 - `./gradlew test build runClientGameTest` passed (42 unit tests and all three client tests).
 - Verified old HUD-file migration preserves other styles, the new style persists, notifications expire after three seconds, and F1/menus hide them. Visually reviewed the global preview with Attribute swap selected.
 
-## Elytra fall counter fix — September 4, 2026
+## Vanilla fall counter fix — September 10, 2026
 
 - Confirmed Minecraft 26.2 calls `Entity.checkFallDistanceAccumulation` from `LivingEntity.updateFallFlying`, capping its damage accumulator at 1 when vertical velocity exceeds -0.5 blocks/tick.
-- Fall HUD now measures actual displacement through the local player's movement method, independent of vanilla damage distance. Collision-resolved movement is used; teleports are not counted, and server position corrections reset the tracker.
+- Fall HUD now displays the local player's vanilla damage-relevant fall distance. Server teleports and position corrections explicitly reset the client accumulator.
 - `./gradlew build runClientGameTest`: passed. New unit tests cover shallow descent, speed changes, level flight, ascent, and resets.
-- Client regression reproduces a 2-block shallow elytra descent with vanilla distance capped at 1, confirms the HUD distance is 2, verifies elytra-to-freefall continuity, and checks ascent/landing resets.
-- Mace calculations and hit-template fall-distance snapshots retain Minecraft's damage accumulator. Live multiplayer flight has not been manually tested.
+- Client regression checks that shallow elytra descent stays capped at 1 and hidden, normal falling accumulates, vanilla resets clear it, and a player-position packet clears pre-teleport distance.
+- Mace calculations, the live HUD, and hit-template fall-distance snapshots all use Minecraft's damage accumulator. Live multiplayer flight has not been manually tested.
