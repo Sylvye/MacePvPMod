@@ -1,6 +1,7 @@
 package dev.macepvpmod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 final class HudRenderer {
     record Bounds(double x,double y,double width,double height) {
         boolean contains(double px,double py) { return px>=x && py>=y && px<=x+width && py<=y+height; }
@@ -10,6 +11,9 @@ final class HudRenderer {
             Math.clamp(viewportH*s.anchorY()-h*s.alignY()+s.y(),0,Math.max(0,viewportH-h)),w,h);
     }
     static Bounds textBounds(String text,HudStyle s,int w,int h) {
+        return textBounds(Component.literal(text),s,w,h);
+    }
+    static Bounds textBounds(Component text,HudStyle s,int w,int h) {
         var font=Minecraft.getInstance().font;
         double scale=Math.min(s.scale(),Math.min(w/(double)Math.max(1,font.width(text)),h/(double)font.lineHeight));
         return bounds(s,font.width(text)*scale,font.lineHeight*scale,w,h);
@@ -19,6 +23,9 @@ final class HudRenderer {
         return textColor(g,text,s,color);
     }
     static Bounds textColor(GuiGraphicsExtractor g,String text,HudStyle s,int color) {
+        return textColor(g,Component.literal(text),s,color);
+    }
+    static Bounds textColor(GuiGraphicsExtractor g,Component text,HudStyle s,int color) {
         var b=textBounds(text,s,g.guiWidth(),g.guiHeight());
         float scale=(float)(b.height()/Minecraft.getInstance().font.lineHeight);
         g.pose().pushMatrix();g.pose().translate((float)b.x(),(float)b.y());g.pose().scale(scale,scale);

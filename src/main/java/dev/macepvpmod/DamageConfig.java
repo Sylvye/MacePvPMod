@@ -3,14 +3,23 @@ package dev.macepvpmod;
 public record DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor, double fallSize,
         int fallX, int fallY, boolean hitEnabled, int hitColor, double hitSize, int hitX, int hitY, int hitSeconds, boolean calculatedDamage, String fallTemplate, String hitTemplate, double fallThreshold,
         ColorScale fallColors, ColorScale hitColors, boolean maceEnabled, boolean spearEnabled,
-        boolean swordAxeEnabled, boolean useEnemyGear) {
+        boolean swordAxeEnabled, boolean useEnemyGear, boolean boldCriticalDamage) {
+    public DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor, double fallSize,
+            int fallX, int fallY, boolean hitEnabled, int hitColor, double hitSize, int hitX, int hitY,
+            int hitSeconds, boolean calculatedDamage, String fallTemplate, String hitTemplate,
+            double fallThreshold, ColorScale fallColors, ColorScale hitColors, boolean maceEnabled,
+            boolean spearEnabled, boolean swordAxeEnabled, boolean useEnemyGear) {
+        this(schemaVersion,fallEnabled,fallColor,fallSize,fallX,fallY,hitEnabled,hitColor,hitSize,hitX,hitY,
+                hitSeconds,calculatedDamage,fallTemplate,hitTemplate,fallThreshold,fallColors,hitColors,
+                maceEnabled,spearEnabled,swordAxeEnabled,useEnemyGear,true);
+    }
     public DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor, double fallSize,
             int fallX, int fallY, boolean hitEnabled, int hitColor, double hitSize, int hitX, int hitY,
             int hitSeconds, boolean calculatedDamage, String fallTemplate, String hitTemplate,
             double fallThreshold, ColorScale fallColors, ColorScale hitColors) {
         this(schemaVersion, fallEnabled, fallColor, fallSize, fallX, fallY, hitEnabled, hitColor, hitSize,
                 hitX, hitY, hitSeconds, calculatedDamage, fallTemplate, hitTemplate, fallThreshold,
-                fallColors, hitColors, true, true, false, false);
+                fallColors, hitColors, true, true, false, false, true);
     }
     public DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor, double fallSize,
             int fallX, int fallY, boolean hitEnabled, int hitColor, double hitSize, int hitX, int hitY, int hitSeconds, boolean calculatedDamage) {
@@ -39,7 +48,7 @@ public record DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor
                 clamp(fallX, -2000, 2000), clamp(fallY, -2000, 2000), hitEnabled,
                 clamp(hitColor, 0, 0xffffff), size(hitSize), clamp(hitX, -2000, 2000), clamp(hitY, -2000, 2000), clamp(hitSeconds, 1, 10), calculatedDamage, template(fallTemplate, false), template(hitTemplate, true), threshold(fallThreshold),
                 (fallColors==null?ColorScale.flat(0xffffff):fallColors).validated(),(hitColors==null?ColorScale.damageDefault():hitColors).validated(),
-                maceEnabled, spearEnabled, swordAxeEnabled, useEnemyGear);
+                maceEnabled, spearEnabled, swordAxeEnabled, useEnemyGear, boldCriticalDamage);
     }
     private static String template(String s, boolean hit) { return DamageText.error(s, hit).isEmpty() && s.length() <= 160 ? s : hit ? "{damage} damage" : "{blocks} blocks"; }
     private static int clamp(int n, int min, int max) { return Math.max(min, Math.min(max, n)); }

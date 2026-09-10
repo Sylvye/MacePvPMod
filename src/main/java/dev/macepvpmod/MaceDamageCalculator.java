@@ -37,9 +37,7 @@ final class MaceDamageCalculator {
         var stack = player.getMainHandItem();
         int density = enchantmentLevel(stack, Enchantments.DENSITY);
         double cooldown = AttributeSwaps.attackCooldown(net.minecraft.client.Minecraft.getInstance());
-        boolean critical = player.fallDistance > 0 && !player.onGround() && !player.onClimbable()
-                && !player.isInWater() && !player.isMobilityRestricted()
-                && !player.isPassenger() && !player.isSprinting();
+        boolean critical = criticalAtAttack(player, target, cooldown);
         double base = AttributeSwaps.attackDamage(net.minecraft.client.Minecraft.getInstance());
         double damage;
         if (DamageWeapon.of(stack) == DamageWeapon.MACE) {
@@ -51,6 +49,11 @@ final class MaceDamageCalculator {
         }
         damage += enchantmentBonus(stack, target) * Math.max(0, Math.min(1, cooldown));
         return damage;
+    }
+    static boolean criticalAtAttack(Player player, LivingEntity target, double cooldown) {
+        return target != null && cooldown > .9 && player.fallDistance > 0 && !player.onGround()
+                && !player.onClimbable() && !player.isInWater() && !player.isMobilityRestricted()
+                && !player.isPassenger() && !player.isSprinting();
     }
     static double enchantmentBonus(net.minecraft.world.item.ItemStack stack, LivingEntity target) {
         int sharpness = enchantmentLevel(stack, Enchantments.SHARPNESS);

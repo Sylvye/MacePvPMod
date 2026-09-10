@@ -94,11 +94,20 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 DamageHud.tick(mc);
                 check(DamageHud.visibleHit().equals(String.format(java.util.Locale.ROOT, "%.1f damage / 8.0 blocks", expected)),
                         "Calculated damage must use attack-time fall/enchantment snapshot without health loss");
+                check(!DamageHud.visibleHitCritical(),"A falling sprint attack must not be marked critical");
                 for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
                 p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));
                 DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
                 DamageHud.tick(mc);
                 check(!DamageHud.visibleHit().isEmpty(),"A confirmed spear jab packet must display calculated damage");
+                check(!DamageHud.visibleHitCritical(),"Spear damage must never be marked critical");
+                for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
+                AttributeSwaps.endTick();p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.MACE));
+                p.setSprinting(false);p.setOnGround(false);p.fallDistance=1;
+                DamageHud.attacked(zombie);
+                DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
+                DamageHud.tick(mc);
+                check(DamageHud.visibleHitCritical(),"A confirmed full-cooldown vanilla critical hit must be marked critical");
                 p.setSprinting(false);
                 try { MacePvPMod.DAMAGE_CONFIG.save(DamageConfig.defaults()); }
                 catch (java.io.IOException e) { throw new RuntimeException(e); }

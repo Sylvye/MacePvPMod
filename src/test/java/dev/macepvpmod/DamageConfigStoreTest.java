@@ -24,11 +24,12 @@ class DamageConfigStoreTest {
         assertEquals(1.5, store.current().fallThreshold());
         assertTrue(store.current().maceEnabled()); assertTrue(store.current().spearEnabled());
         assertFalse(store.current().swordAxeEnabled()); assertFalse(store.current().useEnemyGear());
+        assertTrue(store.current().boldCriticalDamage());
     }
 
     @Test void weaponAndGearTogglesRoundTrip() throws Exception {
         var file=directory.resolve("damage.json");var d=DamageConfig.defaults();
-        var changed=new DamageConfig(1,d.fallEnabled(),d.fallColor(),d.fallSize(),d.fallX(),d.fallY(),d.hitEnabled(),d.hitColor(),d.hitSize(),d.hitX(),d.hitY(),d.hitSeconds(),true,d.fallTemplate(),d.hitTemplate(),d.fallThreshold(),d.fallColors(),d.hitColors(),false,false,true,true);
+        var changed=new DamageConfig(1,d.fallEnabled(),d.fallColor(),d.fallSize(),d.fallX(),d.fallY(),d.hitEnabled(),d.hitColor(),d.hitSize(),d.hitX(),d.hitY(),d.hitSeconds(),true,d.fallTemplate(),d.hitTemplate(),d.fallThreshold(),d.fallColors(),d.hitColors(),false,false,true,true,false);
         new DamageConfigStore(file).save(changed);var loaded=new DamageConfigStore(file);loaded.load();assertEquals(changed,loaded.current());
     }
 

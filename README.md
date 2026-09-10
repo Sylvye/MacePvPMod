@@ -59,6 +59,8 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 
 Strength, Weakness, custom attack attributes, and attribute swaps are included in attack snapshots. Reported mode prefers observed health loss, but uses the saved calculation when health synchronization, invulnerability behavior, or a totem activation prevents a reliable positive health delta.
 
+**Bold critical damage** is enabled by default. It bolds damage only after a server-confirmed ordinary attack met every vanilla critical-hit condition at attack time. Falling alone is insufficient, and spear jabs and charges are never styled as critical hits.
+
 **Use enemy gear** is available only in calculated mode. It estimates post-gear health damage using client-visible armor, toughness, Protection, and Breach. It intentionally excludes Resistance, absorption, active shields, server plugins, and equipment hidden from the client, so the result is a best-effort estimate.
 
 The Minecraft 26.2 formula, verified against the bundled `MaceItem` and `Player` implementations and `data/minecraft/enchantment/density.json`, is:
