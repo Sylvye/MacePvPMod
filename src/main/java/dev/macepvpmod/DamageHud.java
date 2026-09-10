@@ -41,14 +41,15 @@ public final class DamageHud {
                 && MaceDamageCalculator.criticalAtAttack(mc.player,target,AttributeSwaps.attackCooldown(mc));
         pending.put(target.getId(),new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),critical));
     }
-    private record SpearSnapshot(ItemStack weapon,double attackDamage,int useTicks,double forwardSpeed,int age) {}
+    private record SpearSnapshot(ItemStack weapon,double attackDamage,int useTicks,double forwardSpeed,boolean charging,int age) {}
     private static void updateSpearSnapshot(Minecraft mc){
         if(mc.player==null)return;
         ItemStack stack=mc.player.getMainHandItem();
         if(DamageWeapon.of(stack)==DamageWeapon.SPEAR){
             Vec3 motion=KineticWeapon.getMotion(mc.player);
-            spearSnapshot=new SpearSnapshot(stack.copy(),MaceDamageCalculator.effectiveAttackDamage(mc.player),mc.player.isUsingItem()?mc.player.getTicksUsingItem():0,mc.player.getLookAngle().dot(motion),0);
-        }else if(spearSnapshot!=null&&spearSnapshot.age()<6)spearSnapshot=new SpearSnapshot(spearSnapshot.weapon(),spearSnapshot.attackDamage(),spearSnapshot.useTicks(),spearSnapshot.forwardSpeed(),spearSnapshot.age()+1);
+            boolean charging=mc.player.isUsingItem();
+            spearSnapshot=new SpearSnapshot(stack.copy(),MaceDamageCalculator.effectiveAttackDamage(mc.player),charging?mc.player.getTicksUsingItem():0,mc.player.getLookAngle().dot(motion),charging,0);
+        }else if(spearSnapshot!=null&&spearSnapshot.age()<6)spearSnapshot=new SpearSnapshot(spearSnapshot.weapon(),spearSnapshot.attackDamage(),spearSnapshot.useTicks(),spearSnapshot.forwardSpeed(),spearSnapshot.charging(),spearSnapshot.age()+1);
         else spearSnapshot=null;
     }
     private static void registerConfirmedSpear(LivingEntity target){
@@ -57,7 +58,8 @@ public final class DamageHud {
         ItemStack weapon=mc.player.getMainHandItem().copy();if(DamageWeapon.of(weapon)!=DamageWeapon.SPEAR&&spearSnapshot==null)return;
         double amount=MaceDamageCalculator.effectiveAttackDamage(mc.player);
         if(spearSnapshot!=null){weapon=spearSnapshot.weapon();amount=spearSnapshot.attackDamage();KineticWeapon kinetic=weapon.get(DataComponents.KINETIC_WEAPON);
-            if(kinetic!=null){double targetForward=mc.player.getLookAngle().dot(KineticWeapon.getMotion(target));double relative=Math.max(0,spearSnapshot.forwardSpeed()-targetForward);int duration=spearSnapshot.useTicks()-kinetic.delayTicks();
+            if(kinetic!=null&&spearSnapshot.charging()&&spearSnapshot.useTicks()>=kinetic.delayTicks()){
+                double targetForward=mc.player.getLookAngle().dot(KineticWeapon.getMotion(target));double relative=Math.max(0,spearSnapshot.forwardSpeed()-targetForward);int duration=spearSnapshot.useTicks()-kinetic.delayTicks();
                 if(kinetic.damageConditions().isPresent()&&kinetic.damageConditions().get().test(duration,spearSnapshot.forwardSpeed(),relative,1))amount+=Math.floor(relative*kinetic.damageMultiplier());}}
         amount+=MaceDamageCalculator.enchantmentBonus(weapon,target);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,weapon,target);
@@ -79,6 +81,7 @@ public final class DamageHud {
     }
     private static void show(String text,double amount,boolean critical){hit=text;hitAmount=amount;hitCritical=critical;displayTicks=MacePvPMod.DAMAGE_CONFIG.current().hitSeconds()*20;}
     static String visibleHit(){return displayTicks>0?hit:"";}
+    static double visibleHitAmount(){return displayTicks>0?hitAmount:Double.NaN;}
     static boolean visibleHitCritical(){return displayTicks>0&&hitCritical;}
     static boolean showFall(double distance){return showFall(distance,1.5);}
     static boolean showFall(double distance,double threshold){return Double.isFinite(distance)&&Double.isFinite(threshold)&&distance>threshold;}

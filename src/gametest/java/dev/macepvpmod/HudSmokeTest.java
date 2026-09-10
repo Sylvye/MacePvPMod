@@ -97,9 +97,12 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 check(!DamageHud.visibleHitCritical(),"A falling sprint attack must not be marked critical");
                 for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
                 p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));
+                p.setDeltaMovement(0,0,3);DamageHud.tick(mc);
+                double jabDamage=MaceDamageCalculator.effectiveAttackDamage(p)+MaceDamageCalculator.enchantmentBonus(p.getMainHandItem(),zombie);
                 DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
                 DamageHud.tick(mc);
                 check(!DamageHud.visibleHit().isEmpty(),"A confirmed spear jab packet must display calculated damage");
+                check(Math.abs(DamageHud.visibleHitAmount()-jabDamage)<.001,"A spear jab must not inherit velocity damage");
                 check(!DamageHud.visibleHitCritical(),"Spear damage must never be marked critical");
                 for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
                 AttributeSwaps.endTick();p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.MACE));
