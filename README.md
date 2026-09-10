@@ -57,6 +57,8 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 
 **Calculated** works without target health updates. It snapshots the weapon and relevant attack state, includes weapon attributes, cooldown, critical hits, and applicable damage enchantments, and uses Minecraft's movement-based kinetic formula for spear charges. Both modes still require a server damage-event confirmation; calculated mode does not treat unconfirmed swings as successful hits.
 
+Strength, Weakness, custom attack attributes, and attribute swaps are included in attack snapshots. Reported mode prefers observed health loss, but uses the saved calculation when health synchronization, invulnerability behavior, or a totem activation prevents a reliable positive health delta.
+
 **Use enemy gear** is available only in calculated mode. It estimates post-gear health damage using client-visible armor, toughness, Protection, and Breach. It intentionally excludes Resistance, absorption, active shields, server plugins, and equipment hidden from the client, so the result is a best-effort estimate.
 
 The Minecraft 26.2 formula, verified against the bundled `MaceItem` and `Player` implementations and `data/minecraft/enchantment/density.json`, is:

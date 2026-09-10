@@ -23,7 +23,7 @@ public final class DamageSettingsScreen extends Screen {
         template(rows,true,w);
         rows.addChild(Button.builder(Component.literal("Hit colors: "+mode(hitColors)),b->minecraft.gui.setScreen(new ColorScaleEditorScreen(this,"Hit damage",hitColors,c->{hitColors=c;rebuildWidgets();}))).bounds(0,0,w,20).build());
         rows.addChild(SettingsControls.slider("Hit seconds",seconds,1,10,1,w,v->seconds=(int)v));
-        rows.addChild(Button.builder(Component.literal("Damage: "+(calculated?"Calculated":"Reported")),b->{calculated=!calculated;rebuildWidgets();}).bounds(0,0,w,20).tooltip(Tooltip.create(Component.literal("Reported: server health lost. Calculated: raw damage before defenses."))).build());
+        rows.addChild(Button.builder(Component.literal("Damage: "+(calculated?"Calculated":"Reported")),b->{calculated=!calculated;rebuildWidgets();}).bounds(0,0,w,20).tooltip(Tooltip.create(Component.literal("Reported: observed health lost, with a calculated fallback. Calculated: attack estimate."))).build());
         if(calculated)rows.addChild(Button.builder(Component.literal("Use enemy gear: "+(useGear?"On":"Off")),b->{useGear=!useGear;rebuildWidgets();}).bounds(0,0,w,20).tooltip(Tooltip.create(Component.literal("Estimates final damage from visible armor, toughness, Protection, and Breach."))).build());
         rows.addChild(Button.builder(Component.literal("Edit appearance in HUD"),b->minecraft.gui.setScreen(new HudSettingsScreen(this,1))).bounds(0,0,w,20).build());
         rows.addChild(Button.builder(Component.literal("Reset defaults"),b->{read(DamageConfig.defaults());rebuildWidgets();}).bounds(0,0,w,20).build());

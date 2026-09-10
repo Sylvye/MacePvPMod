@@ -44,7 +44,8 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 DamageHud.attacked(zombie);
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
                 for (int tick = 0; tick < 20; tick++) DamageHud.tick(mc);
-                check(DamageHud.visibleHit().equals("Damage unavailable"), "Missing health update must not fabricate damage");
+                check(!DamageHud.visibleHit().isEmpty() && !DamageHud.visibleHit().equals("Damage unavailable"),
+                        "Confirmed hits without a health update must use the calculated fallback");
                 for (int tick = 0; tick < 60; tick++) DamageHud.tick(mc);
                 p.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STICK));
                 DamageHud.attacked(zombie); zombie.setHealth(10);
@@ -62,6 +63,13 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 p.setItemSlot(EquipmentSlot.MAINHAND, sword);
                 check(Math.abs(MaceDamageCalculator.effectiveAttackDamage(p) - 8) < .001,
                         "Netherite sword attack damage should include its +7 modifier");
+                p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH,200,0));
+                check(Math.abs(MaceDamageCalculator.effectiveAttackDamage(p) - 11) < .001,
+                        "Strength must be included in effective attack damage");
+                p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS,200,0));
+                check(Math.abs(MaceDamageCalculator.effectiveAttackDamage(p) - 7) < .001,
+                        "Weakness must be included in effective attack damage");
+                p.removeEffect(net.minecraft.world.effect.MobEffects.STRENGTH);p.removeEffect(net.minecraft.world.effect.MobEffects.WEAKNESS);
                 AttributeSwaps.click();
                 p.setItemSlot(EquipmentSlot.MAINHAND, plain);
                 check(Math.abs(AttributeSwaps.attackDamage(mc) - 8) < .001,
@@ -86,6 +94,11 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 DamageHud.tick(mc);
                 check(DamageHud.visibleHit().equals(String.format(java.util.Locale.ROOT, "%.1f damage / 8.0 blocks", expected)),
                         "Calculated damage must use attack-time fall/enchantment snapshot without health loss");
+                for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
+                p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));
+                DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
+                DamageHud.tick(mc);
+                check(!DamageHud.visibleHit().isEmpty(),"A confirmed spear jab packet must display calculated damage");
                 p.setSprinting(false);
                 try { MacePvPMod.DAMAGE_CONFIG.save(DamageConfig.defaults()); }
                 catch (java.io.IOException e) { throw new RuntimeException(e); }

@@ -10,6 +10,9 @@ import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.KineticWeapon;
+import net.minecraft.world.phys.Vec3;
 
 public final class DamageHud {
     private static final Map<Integer, Pending> pending = new LinkedHashMap<>();
@@ -17,10 +20,11 @@ public final class DamageHud {
     private static double hitAmount = Double.NaN;
     private static String hit = "";
     private static Object level;
+    private static SpearSnapshot spearSnapshot;
     private DamageHud() {}
     private static final class Pending {
         final LivingEntity target; final float before; final double blocks, amount; final boolean calculated;
-        int ticks=20; boolean confirmed;
+        int ticks=40, confirmedTicks; boolean confirmed, totem;
         Pending(LivingEntity target,double blocks,double amount,boolean calculated){this.target=target;before=target.getHealth();this.blocks=blocks;this.amount=amount;this.calculated=calculated;}
     }
     public static void attacked(Entity entity) {
@@ -28,27 +32,45 @@ public final class DamageHud {
         if(mc.player==null||!(entity instanceof LivingEntity target))return;
         var config=MacePvPMod.DAMAGE_CONFIG.current();var weapon=mc.player.getMainHandItem().copy();
         if(!config.hitEnabled()||!DamageWeapon.of(weapon).enabled(config))return;
-        double amount=config.calculatedDamage()?MaceDamageCalculator.atAttack(mc.player,target):0;
+        double amount=MaceDamageCalculator.atAttack(mc.player,target);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,weapon,target);
         pending.put(target.getId(),new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage()));
     }
-    public static void spearAttacked(LivingEntity attacker,Entity entity,float kineticAmount){
-        Minecraft mc=Minecraft.getInstance();var config=MacePvPMod.DAMAGE_CONFIG.current();
-        if(attacker!=mc.player||!(entity instanceof LivingEntity target)||!config.hitEnabled()||!config.spearEnabled())return;
-        ItemStack weapon=attacker.getMainHandItem().copy();double amount=kineticAmount+MaceDamageCalculator.enchantmentBonus(weapon,target);
-        if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,weapon,target);
-        pending.put(target.getId(),new Pending(target,attacker.fallDistance,amount,config.calculatedDamage()));
+    private record SpearSnapshot(ItemStack weapon,double attackDamage,int useTicks,double forwardSpeed,int age) {}
+    private static void updateSpearSnapshot(Minecraft mc){
+        if(mc.player==null)return;
+        ItemStack stack=mc.player.getMainHandItem();
+        if(DamageWeapon.of(stack)==DamageWeapon.SPEAR){
+            Vec3 motion=KineticWeapon.getMotion(mc.player);
+            spearSnapshot=new SpearSnapshot(stack.copy(),MaceDamageCalculator.effectiveAttackDamage(mc.player),mc.player.isUsingItem()?mc.player.getTicksUsingItem():0,mc.player.getLookAngle().dot(motion),0);
+        }else if(spearSnapshot!=null&&spearSnapshot.age()<6)spearSnapshot=new SpearSnapshot(spearSnapshot.weapon(),spearSnapshot.attackDamage(),spearSnapshot.useTicks(),spearSnapshot.forwardSpeed(),spearSnapshot.age()+1);
+        else spearSnapshot=null;
     }
-    public static void damageEvent(ClientboundDamageEventPacket packet){var mc=Minecraft.getInstance();Pending p=pending.get(packet.entityId());if(p!=null&&mc.player!=null&&packet.sourceCauseId()==mc.player.getId())p.confirmed=true;}
+    private static void registerConfirmedSpear(LivingEntity target){
+        var mc=Minecraft.getInstance();var config=MacePvPMod.DAMAGE_CONFIG.current();
+        if(mc.player==null||!config.hitEnabled()||!config.spearEnabled())return;
+        ItemStack weapon=mc.player.getMainHandItem().copy();if(DamageWeapon.of(weapon)!=DamageWeapon.SPEAR&&spearSnapshot==null)return;
+        double amount=MaceDamageCalculator.effectiveAttackDamage(mc.player);
+        if(spearSnapshot!=null){weapon=spearSnapshot.weapon();amount=spearSnapshot.attackDamage();KineticWeapon kinetic=weapon.get(DataComponents.KINETIC_WEAPON);
+            if(kinetic!=null){double targetForward=mc.player.getLookAngle().dot(KineticWeapon.getMotion(target));double relative=Math.max(0,spearSnapshot.forwardSpeed()-targetForward);int duration=spearSnapshot.useTicks()-kinetic.delayTicks();
+                if(kinetic.damageConditions().isPresent()&&kinetic.damageConditions().get().test(duration,spearSnapshot.forwardSpeed(),relative,1))amount+=Math.floor(relative*kinetic.damageMultiplier());}}
+        amount+=MaceDamageCalculator.enchantmentBonus(weapon,target);
+        if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,weapon,target);
+        Pending p=new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage());p.confirmed=true;pending.put(target.getId(),p);
+    }
+    public static void damageEvent(ClientboundDamageEventPacket packet){var mc=Minecraft.getInstance();if(mc.player==null||packet.sourceCauseId()!=mc.player.getId())return;Pending p=pending.get(packet.entityId());if(p==null&&mc.level!=null&&mc.level.getEntity(packet.entityId()) instanceof LivingEntity living){registerConfirmedSpear(living);p=pending.get(packet.entityId());}if(p!=null)p.confirmed=true;}
+    public static void entityEvent(Entity entity,byte event){if(event==35){Pending p=pending.get(entity.getId());if(p!=null)p.totem=true;}}
     public static void tick(Minecraft mc){
-        if(mc.level!=level||mc.player==null||!mc.player.isAlive()){level=mc.level;pending.clear();displayTicks=0;hit="";return;}
+        if(mc.level!=level||mc.player==null||!mc.player.isAlive()){level=mc.level;pending.clear();spearSnapshot=null;displayTicks=0;hit="";return;}
+        updateSpearSnapshot(mc);
         if(displayTicks>0)displayTicks--;
         if(!MacePvPMod.DAMAGE_CONFIG.current().hitEnabled()){pending.clear();displayTicks=0;return;}
         Iterator<Pending> iterator=pending.values().iterator();
-        while(iterator.hasNext()){Pending p=iterator.next();p.ticks--;float observed=p.before-p.target.getHealth();
+        while(iterator.hasNext()){Pending p=iterator.next();p.ticks--;if(p.confirmed)p.confirmedTicks++;float observed=p.before-p.target.getHealth();
             if(p.confirmed&&p.calculated){show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(),p.blocks,p.amount),p.amount);iterator.remove();}
             else if(p.confirmed&&observed>0){show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(),p.blocks,observed),observed);iterator.remove();}
-            else if(p.ticks<=0){if(p.confirmed)show("Damage unavailable",Double.NaN);iterator.remove();}}
+            else if(p.confirmed&&(p.totem||p.confirmedTicks>=10)){show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(),p.blocks,p.amount),p.amount);iterator.remove();}
+            else if(p.ticks<=0)iterator.remove();}
     }
     private static void show(String text,double amount){hit=text;hitAmount=amount;displayTicks=MacePvPMod.DAMAGE_CONFIG.current().hitSeconds()*20;}
     static String visibleHit(){return displayTicks>0?hit:"";}

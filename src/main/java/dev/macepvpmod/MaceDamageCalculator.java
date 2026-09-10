@@ -8,14 +8,23 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import java.util.ArrayList;
 
 final class MaceDamageCalculator {
     private MaceDamageCalculator() {}
     static double effectiveAttackDamage(Player player) {
-        double base = player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
-        ItemAttributeModifiers modifiers = player.getMainHandItem().getOrDefault(
-                DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
-        return modifiers.compute(Attributes.ATTACK_DAMAGE, base, EquipmentSlot.MAINHAND);
+        var modifiers=new ArrayList<AttributeModifier>();
+        player.getMainHandItem().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS,ItemAttributeModifiers.EMPTY)
+                .forEach(EquipmentSlot.MAINHAND,(attribute,modifier)->{if(attribute.equals(Attributes.ATTACK_DAMAGE))modifiers.add(modifier);});
+        for(var effect:player.getActiveEffects())effect.getEffect().value().createModifiers(effect.getAmplifier(),
+                (attribute,modifier)->{if(attribute.equals(Attributes.ATTACK_DAMAGE))modifiers.add(modifier);});
+        double withAdds=player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
+        for(var modifier:modifiers)if(modifier.operation()==AttributeModifier.Operation.ADD_VALUE)withAdds+=modifier.amount();
+        double result=withAdds;
+        for(var modifier:modifiers)if(modifier.operation()==AttributeModifier.Operation.ADD_MULTIPLIED_BASE)result+=withAdds*modifier.amount();
+        for(var modifier:modifiers)if(modifier.operation()==AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)result*=1+modifier.amount();
+        return result;
     }
     static int enchantmentLevel(net.minecraft.world.item.ItemStack stack,
                                 net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> enchantment) {
