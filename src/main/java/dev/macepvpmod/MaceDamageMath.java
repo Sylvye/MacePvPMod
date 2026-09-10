@@ -1,6 +1,6 @@
 package dev.macepvpmod;
 
-/** Vanilla 26.2 raw damage; no target defenses or Breach armor piercing. */
+/** Vanilla 26.2 mace damage before target defenses. */
 public final class MaceDamageMath {
     private MaceDamageMath() {}
     public static double calculate(double attackDamage, double cooldown, double fallDistance,

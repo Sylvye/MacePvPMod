@@ -116,8 +116,9 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 check(p.fallDistance == 0, "A server teleport must reset fall distance");
                 p.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(0, -2, 0));
                 check(Math.abs(p.fallDistance - 2) < 1e-6, "Falling after teleport must restart from zero");
-                p.setOnGround(true);
-                p.move(net.minecraft.world.entity.MoverType.SELF, net.minecraft.world.phys.Vec3.ZERO);
+                // A client-only move is not a valid landing simulation: move() recomputes
+                // onGround from collision geometry and the server rejects the synthetic move.
+                p.resetFallDistance();
                 check(p.fallDistance == 0, "Landing must reset fall distance");
                 p.setOnGround(false); p.startFallFlying();
                 mc.gui.hud.toggle(); check(!PitchHud.shouldRender(mc, defaults), "F1 should hide guide"); mc.gui.hud.toggle();

@@ -6,7 +6,7 @@ The mod includes five modules:
 
 - **HUD** — central editor for overlay placement, size, colors, and previews.
 - **Elytra Pitch Bar** — a configurable on-screen pitch reference for repeatable elytra approaches and mace dives.
-- **Damage Counter** — displays accumulated fall distance and confirmed mace-hit damage, with reported and estimated calculation modes.
+- **Damage Counter** — displays accumulated fall distance and confirmed mace, spear, sword, or axe damage, with reported and estimated calculation modes.
 - **Attribute Swaps** — gives visual and sound feedback when a hotbar selection changes the player’s active attack attributes.
 - **Survival instincts** — warns when a totem should be moved to the offhand and displays configurable low-health and low-saturation alerts, including optional audio cues.
 
@@ -47,7 +47,7 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 ### Damage Counter
 
 - **Fall distance:** appears above the configurable **Fall threshold (blocks)**, set to 1.5 by default, at 14 GUI pixels below the crosshair. Shows Minecraft's damage-relevant fall distance. Slow elytra descents are capped at 1 block by vanilla and remain hidden at the default threshold. Vanilla fall-ending conditions and server teleports or position corrections reset the counter.
-- **Mace hit damage:** choose **Damage: Reported** (default) or **Damage: Calculated**. Both show damage points (2 points = 1 heart) after a server-confirmed mace hit on a living entity, for 3 seconds by default.
+- **Weapon damage:** independently enable mace (default on), spear (default on), and sword & axe (default off). Choose **Damage: Reported** (default) or **Damage: Calculated**. Both show damage points (2 points = 1 heart) after a server-confirmed hit on a living entity, for 3 seconds by default.
 - Each feature has its own enable toggle and message template. Hit duration is configurable from 1–10 seconds. Appearance is edited in **HUD**.
 - Fall defaults to `{blocks} blocks`; hit defaults to `{damage} damage`. Hit messages also support `{blocks}` for the same Minecraft fall distance captured at attack time. Values use one decimal place. For example, `{damage} damage from {blocks} blocks` becomes `18.0 damage from 12.5 blocks`.
 - Variable insertion buttons, explanations, and live examples appear beside the fields. Blank messages and unsupported variables block saving. Each new hit replaces the previous hit message.
@@ -55,7 +55,9 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 
 **Reported** uses server health updates. A confirmed hit without a measurable health decrease displays **Damage unavailable**. Absorption damage is not included; overlapping damage from other sources may affect observed health loss.
 
-**Calculated** works without target health updates. The message has no added mode suffix. It snapshots the mace, fall distance, attack attribute, cooldown, and critical-hit conditions when attacking. It estimates raw outgoing damage before armor, toughness, Protection, Resistance, absorption, shields, or server modifications; Breach armor piercing is ignored. Target-specific enchantment bonuses such as Smite are not calculated. Both modes still require a server damage-event confirmation; calculated mode does not treat unconfirmed swings as successful hits.
+**Calculated** works without target health updates. It snapshots the weapon and relevant attack state, includes weapon attributes, cooldown, critical hits, and applicable damage enchantments, and uses Minecraft's movement-based kinetic formula for spear charges. Both modes still require a server damage-event confirmation; calculated mode does not treat unconfirmed swings as successful hits.
+
+**Use enemy gear** is available only in calculated mode. It estimates post-gear health damage using client-visible armor, toughness, Protection, and Breach. It intentionally excludes Resistance, absorption, active shields, server plugins, and equipment hidden from the client, so the result is a best-effort estimate.
 
 The Minecraft 26.2 formula, verified against the bundled `MaceItem` and `Player` implementations and `data/minecraft/enchantment/density.json`, is:
 
