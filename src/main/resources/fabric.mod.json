@@ -4,6 +4,7 @@
   "version": "${version}",
   "name": "MacePvPMod",
   "description": "A client-only configurable HUD and combat-awareness toolkit for elytra mace PvP and survival. Created by Sylvye. Source: https://github.com/Sylvye/MacePvPMod",
+  "icon": "assets/macepvpmod/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
