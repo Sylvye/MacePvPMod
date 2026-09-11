@@ -55,7 +55,7 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 
 **Reported** uses server health updates. A confirmed hit without a measurable health decrease displays **Damage unavailable**. Absorption damage is not included; overlapping damage from other sources may affect observed health loss.
 
-**Calculated** works without target health updates. It snapshots the weapon and relevant attack state, includes weapon attributes, cooldown, critical hits, and applicable damage enchantments, and uses Minecraft's movement-based kinetic formula for spear charges. Both modes still require a server damage-event confirmation; calculated mode does not treat unconfirmed swings as successful hits.
+**Calculated** works without target health updates. It snapshots the weapon and relevant attack state, includes weapon attributes, cooldown, critical hits, and applicable damage enchantments, and predicts spear charges from client-visible movement and targeting data. Spear prediction is read-only and never invokes combat actions or sends packets. Charge damage uses the player's base attack damage plus the relative-velocity bonus; unlike a jab, it does not include the spear's material attack modifier or Strength and Weakness modifiers. Both modes still require a server damage-event confirmation; calculated mode does not treat unconfirmed swings as successful hits.
 
 Strength, Weakness, custom attack attributes, and attribute swaps are included in attack snapshots. Reported mode prefers observed health loss, but uses the saved calculation when health synchronization, invulnerability behavior, or a totem activation prevents a reliable positive health delta.
 

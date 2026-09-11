@@ -98,10 +98,14 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
                 p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));
                 p.setDeltaMovement(0,0,3);DamageHud.tick(mc);
-                double jabDamage=MaceDamageCalculator.effectiveAttackDamage(p)+MaceDamageCalculator.enchantmentBonus(p.getMainHandItem(),zombie);
+                var piercing=p.getMainHandItem().get(net.minecraft.core.component.DataComponents.PIERCING_WEAPON);
+                double jabDamage=p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)
+                        +MaceDamageCalculator.enchantmentBonus(p.getMainHandItem(),zombie);
+                DamageHud.spearJab(piercing);
                 DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
+                DamageHud.spearJab(piercing);
                 DamageHud.tick(mc);
-                check(!DamageHud.visibleHit().isEmpty(),"A confirmed spear jab packet must display calculated damage");
+                check(!DamageHud.visibleHit().isEmpty(),"A newer prediction must not replace a confirmed spear hit");
                 check(Math.abs(DamageHud.visibleHitAmount()-jabDamage)<.001,"A spear jab must not inherit velocity damage");
                 check(!DamageHud.visibleHitCritical(),"Spear damage must never be marked critical");
                 for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
