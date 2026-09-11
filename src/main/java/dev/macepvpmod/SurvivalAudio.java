@@ -20,7 +20,7 @@ final class SurvivalAudio {
         var c = MacePvPMod.SURVIVAL_CONFIG.current();
         if (!playlist.equals(c.sounds())) { stop(mc); playlist = c.sounds(); }
         boolean active = p != null && mc.level != null && !mc.isPaused() && p.isAlive() && !p.isSpectator()
-                && c.healingEnabled() && c.sounds().stream().anyMatch(e -> e.volume() > 0)
+                && c.enabled() && c.healingEnabled() && c.sounds().stream().anyMatch(e -> e.volume() > 0)
                 && (SurvivalState.healingState(p.getHealth(), p.getMaxHealth(), p.getFoodData().getSaturationLevel(), c) & 1) != 0;
         if (!active) { stop(mc); return; }
         var cue = SEQUENCE.tick(true, 1, c.audioStartInterval(), c.audioEndInterval(),

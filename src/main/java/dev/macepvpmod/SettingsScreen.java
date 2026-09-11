@@ -1,30 +1,33 @@
 package dev.macepvpmod;
 
+import java.io.IOException;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Module directory: each module owns a separate settings screen. */
+/** Unified settings workspace. Sidebar switches share one apply/cancel draft. */
 public final class SettingsScreen extends Screen {
-    private final Screen parent;
-    public SettingsScreen(Screen parent) { super(Component.literal("MacePvPMod • Modules")); this.parent = parent; }
-    @Override protected void init() {
-        var rows = net.minecraft.client.gui.layouts.LinearLayout.vertical().spacing(8);
-        rows.addChild(Button.builder(Component.literal("Elytra Pitch Bar"), b -> minecraft.gui.setScreen(new PitchSettingsScreen(this))).bounds(0, 0, 220, 24).build());
-        rows.addChild(Button.builder(Component.literal("Damage Counter"), b -> minecraft.gui.setScreen(new DamageSettingsScreen(this))).bounds(0, 0, 220, 24).build());
-        rows.addChild(Button.builder(Component.literal("Attribute Swaps"), b -> minecraft.gui.setScreen(new AttributeSwapSettingsScreen(this))).bounds(0, 0, 220, 24).build());
-        rows.addChild(Button.builder(Component.literal("Survival instincts"), b -> minecraft.gui.setScreen(new SurvivalSettingsScreen(this))).bounds(0, 0, 220, 24).build());
-        rows.addChild(Button.builder(Component.literal("HUD"), b -> minecraft.gui.setScreen(new HudSettingsScreen(this, 0))).bounds(0, 0, 220, 24).build());
-        rows.addChild(Button.builder(Component.literal("Reach Outlines"), b -> minecraft.gui.setScreen(new ReachOutlineSettingsScreen(this))).bounds(0, 0, 220, 24).build());
-        var scroll = new net.minecraft.client.gui.components.ScrollableLayout(minecraft, rows, Math.max(32, height - 86));
-        scroll.setMinWidth(220); scroll.arrangeElements(); scroll.setX((width - scroll.getWidth()) / 2); scroll.setY(42);
-        scroll.visitWidgets(this::addRenderableWidget);
-        addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 110, height - 30, 220, 20).build());
-    }
-    @Override public void extractRenderState(GuiGraphicsExtractor g, int x, int y, float dt) {
-        super.extractRenderState(g, x, y, dt);
-        g.centeredText(font, title, width / 2, 20, 0xffffffff);
-    }
-    @Override public void onClose() { minecraft.gui.setScreen(parent); }
+    private static final String[] NAMES={"Overview","Elytra Pitch Bar","Damage Counter","Attribute Swaps","Survival Instincts","Reach Outlines","HUD Studio"};
+    private static final String[] INFO={"Everything in one place. Changes remain drafts until you apply them.","A pitch reference for elytra approaches and mace dives.","Fall distance and confirmed hit feedback.","Feedback when active combat attributes change.","Totem, health, saturation, item, and audio assistance.","Highlight surfaces inside or near interaction reach.","Place and style every overlay together."};
+    private final Screen parent;private final SettingsSession session;private int page,sidebar,bodyX,bodyWidth;private String error="";private Button apply;
+    public SettingsScreen(Screen parent){this(parent,new SettingsSession(),0);}
+    private SettingsScreen(Screen parent,SettingsSession session,int page){super(Component.translatable("macepvpmod.settings.title"));this.parent=parent;this.session=session;this.page=page;}
+    protected void init(){session.refreshFocusedEdits();sidebar=Math.min(164,Math.max(112,width/3));bodyX=sidebar+14;bodyWidth=Math.max(150,width-bodyX-14);int y=42;
+        for(int i=0;i<NAMES.length;i++){int n=i;addRenderableWidget(Button.builder(Component.literal((page==i?"› ":"")+NAMES[i]),b->{page=n;error="";rebuildWidgets();}).bounds(8,y,sidebar-16,22).build());if(i>0&&i<6)addRenderableWidget(Button.builder(Component.literal(session.enabled(i)?"ON":"OFF"),b->{session.toggle(n);rebuildWidgets();}).bounds(sidebar-44,y+3,32,16).build());y+=27;}
+        var rows=LinearLayout.vertical().spacing(7);rows.addChild(new StringWidget(Component.literal(INFO[page]).withColor(0xffb8c2cc),font));if(page==0)overview(rows);else module(rows);
+        var scroll=new ScrollableLayout(minecraft,rows,Math.max(40,height-96));scroll.setMinWidth(bodyWidth);scroll.arrangeElements();scroll.setX(bodyX);scroll.setY(48);scroll.visitWidgets(this::addRenderableWidget);
+        int w=Math.min(100,(bodyWidth-6)/2),right=width-14;apply=addRenderableWidget(Button.builder(Component.translatable("macepvpmod.settings.apply"),b->apply()).bounds(right-w*2-6,height-28,w,20).build());apply.active=session.dirty()&&session.validation().isEmpty();addRenderableWidget(Button.builder(Component.translatable("macepvpmod.settings.cancel"),b->closeRequested()).bounds(right-w,height-28,w,20).build());}
+    private void overview(LinearLayout rows){section(rows,"MODULES","Use sidebar switches for fast control; open a module for its individual features.");for(int i=1;i<6;i++)rows.addChild(new StringWidget(Component.literal(NAMES[i]+"  •  "+(session.enabled(i)?"Enabled":"Disabled")),font));section(rows,"WORKFLOW","Apply writes the complete draft. Cancel restores the settings active when this screen opened.");rows.addChild(Button.builder(Component.translatable("macepvpmod.settings.reset_all"),b->confirm("Reset all settings?","Every module and HUD element will return to defaults.",()->{session.resetAll();rebuildWidgets();})).bounds(0,0,Math.min(300,bodyWidth),20).build());}
+    private void module(LinearLayout rows){if(page<6){section(rows,"GENERAL",session.enabled(page)?"This module is enabled.":"Disabled; individual choices are preserved.");rows.addChild(Button.builder(Component.literal((session.enabled(page)?"Disable ":"Enable ")+NAMES[page]),b->{session.toggle(page);rebuildWidgets();}).bounds(0,0,Math.min(300,bodyWidth),20).build());}
+        switch(page){case 1->{section(rows,"FLIGHT BEHAVIOR","Target "+session.pitch.targetPitch()+"°  •  "+session.pitch.sensitivity()+" px/degree  •  "+(session.pitch.thirdPerson()?"Third person":"First person"));detail(rows,"Edit pitch behavior",new PitchSettingsScreen(this));appearance(rows,0);}case 2->{section(rows,"FALL DISTANCE",state(session.damage.fallEnabled())+"  •  threshold "+session.damage.fallThreshold()+" blocks");section(rows,"HIT DAMAGE",state(session.damage.hitEnabled())+"  •  "+session.damage.hitSeconds()+" seconds  •  "+(session.damage.calculatedDamage()?"Calculated":"Reported"));section(rows,"WEAPONS & CALCULATION","Mace "+state(session.damage.maceEnabled())+"  •  Spear "+state(session.damage.spearEnabled())+"  •  Sword/Axe "+state(session.damage.swordAxeEnabled()));detail(rows,"Edit damage settings",new DamageSettingsScreen(this));appearance(rows,1);}case 3->{section(rows,"FEEDBACK","HUD "+state(session.swap.visualEnabled())+"  •  Sound "+state(session.swap.soundEnabled()));section(rows,"DETECTION RULES",(session.swap.weaponOnly()?"Weapons only":"Any item")+"  •  "+(session.swap.successfulHitOnly()?"Successful hits":"Any swap"));detail(rows,"Edit attribute swap settings",new AttributeSwapSettingsScreen(this));appearance(rows,5);}case 4->{section(rows,"WARNINGS","Retotem "+state(session.survival.retotemEnabled())+"  •  Health and saturation "+state(session.survival.healingEnabled()));section(rows,"THRESHOLDS","Health "+session.survival.healthPercent()+"%  •  Saturation "+session.survival.saturationThreshold()+"/20");section(rows,"ITEMS & AUDIO",session.survival.healingItems().size()+" healing items  •  "+session.survival.sounds().size()+" sounds");detail(rows,"Edit survival settings",new SurvivalSettingsScreen(this));appearance(rows,4);}case 5->{section(rows,"DETECTION",session.reach.topFacesOnly()?"Top faces only":"All faces");section(rows,"RENDERING",session.reach.hardToReachMode().label()+"  •  "+session.reach.thickness()+" px  •  "+Math.round(session.reach.intensity()*100)+"% intensity");detail(rows,"Edit reach outlines",new ReachOutlineSettingsScreen(this));}case 6->{section(rows,"OVERLAY EDITOR","Preview all overlays, then drag, resize, nudge, and recolor them.");detail(rows,"Open HUD Studio",new HudSettingsScreen(this,0));}}
+        rows.addChild(Button.builder(Component.translatable("macepvpmod.settings.reset_section"),b->confirm("Reset "+NAMES[page]+"?","Only the current draft section will change.",()->{session.reset(page);rebuildWidgets();})).bounds(0,0,Math.min(300,bodyWidth),20).build());}
+    private void appearance(LinearLayout rows,int element){section(rows,"APPEARANCE","Placement and styling are managed in HUD Studio.");detail(rows,"Edit this HUD element",new HudSettingsScreen(this,element));}
+    private void detail(LinearLayout rows,String label,Screen target){rows.addChild(Button.builder(Component.literal(label+"  ›"),b->minecraft.gui.setScreen(target)).bounds(0,0,Math.min(300,bodyWidth),20).build());}
+    private void section(LinearLayout rows,String title,String copy){rows.addChild(new StringWidget(Component.literal(title).withColor(0xff66ddff),font));rows.addChild(new StringWidget(Component.literal(copy).withColor(0xffb8c2cc),font));}private static String state(boolean v){return v?"On":"Off";}
+    private void confirm(String title,String copy,Runnable yes){minecraft.gui.setScreen(new SettingsConfirmScreen(this,title,copy,yes,()->minecraft.gui.setScreen(this)));}
+    private void apply(){try{session.apply();minecraft.gui.setScreen(parent);}catch(IOException e){error="Could not apply: "+e.getMessage();rebuildWidgets();}}
+    private void closeRequested(){session.refreshFocusedEdits();if(!session.dirty())minecraft.gui.setScreen(parent);else minecraft.gui.setScreen(new SettingsConfirmScreen(this,"Unsaved changes","Apply changes before closing?",this::apply,()->{session.discard();minecraft.gui.setScreen(parent);}));}public void onClose(){closeRequested();}
+    public void extractRenderState(GuiGraphicsExtractor g,int x,int y,float dt){g.fill(0,0,width,height,0xff10151c);g.fill(0,0,sidebar,height,0xff171e27);g.fill(sidebar,0,sidebar+1,height,0xff2b3947);g.fill(sidebar,0,width,38,0xff141b23);super.extractRenderState(g,x,y,dt);g.text(font,"MACE PVP",14,15,0xff66ddff);g.text(font,NAMES[page],bodyX,15,0xffffffff);String s=!session.validation().isEmpty()?session.validation():error;if(!s.isEmpty())g.text(font,s,bodyX,height-42,0xffff7777);else if(session.dirty())g.text(font,"Unapplied changes",bodyX,height-42,0xffffcc66);}
 }

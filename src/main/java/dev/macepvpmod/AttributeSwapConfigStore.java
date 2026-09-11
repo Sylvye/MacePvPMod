@@ -22,6 +22,7 @@ public final class AttributeSwapConfigStore {
             // Overlay saved fields onto defaults so newly added settings remain usable.
             JsonObject merged = GSON.toJsonTree(AttributeSwapConfig.defaults()).getAsJsonObject();
             for (var entry : saved.entrySet()) {
+                if (entry.getKey().equals("schemaVersion")) continue;
                 if (merged.has(entry.getKey())) {
                     JsonElement value = entry.getValue();
                     JsonPrimitive expected = merged.getAsJsonPrimitive(entry.getKey());
@@ -32,6 +33,7 @@ public final class AttributeSwapConfigStore {
                     merged.add(entry.getKey(), value);
                 }
             }
+            merged.addProperty("schemaVersion", 2);
             current = GSON.fromJson(merged, AttributeSwapConfig.class).validated();
         } catch (Exception error) {
             LOG.warn("Could not load attribute swap settings; using defaults", error);

@@ -32,6 +32,7 @@ public final class SurvivalConfigStore {
             // Overlay saved fields onto defaults so newly added settings remain usable.
             JsonObject merged = GSON.toJsonTree(SurvivalConfig.defaults()).getAsJsonObject();
             for (var entry : saved.entrySet()) {
+                if (entry.getKey().equals("schemaVersion")) continue;
                 if (merged.has(entry.getKey())) {
                     JsonElement value = entry.getValue();
                     if (entry.getKey().equals("healingItems") || entry.getKey().equals("saturationItems")) {
@@ -68,6 +69,7 @@ public final class SurvivalConfigStore {
                     merged.add(entry.getKey(), value);
                 }
             }
+            merged.addProperty("schemaVersion", 2);
             current = GSON.fromJson(merged, SurvivalConfig.class).validated();
         } catch (Exception error) {
             LOG.warn("Could not load survival instincts settings; using defaults", error);

@@ -34,7 +34,7 @@ public final class DamageHud {
         Minecraft mc=Minecraft.getInstance();
         if(mc.player==null||!(entity instanceof LivingEntity target))return;
         var config=MacePvPMod.DAMAGE_CONFIG.current();var weapon=mc.player.getMainHandItem().copy();
-        if(!config.hitEnabled()||!DamageWeapon.of(weapon).enabled(config))return;
+        if(!config.enabled()||!config.hitEnabled()||!DamageWeapon.of(weapon).enabled(config))return;
         double amount=MaceDamageCalculator.atAttack(mc.player,target);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,weapon,target);
         boolean critical=DamageWeapon.of(weapon)!=DamageWeapon.SPEAR
@@ -54,7 +54,7 @@ public final class DamageHud {
     }
     private static void registerConfirmedSpear(LivingEntity target){
         var mc=Minecraft.getInstance();var config=MacePvPMod.DAMAGE_CONFIG.current();
-        if(mc.player==null||!config.hitEnabled()||!config.spearEnabled())return;
+        if(mc.player==null||!config.enabled()||!config.hitEnabled()||!config.spearEnabled())return;
         ItemStack weapon=mc.player.getMainHandItem().copy();if(DamageWeapon.of(weapon)!=DamageWeapon.SPEAR&&spearSnapshot==null)return;
         double amount=MaceDamageCalculator.effectiveAttackDamage(mc.player);
         if(spearSnapshot!=null){weapon=spearSnapshot.weapon();amount=spearSnapshot.attackDamage();KineticWeapon kinetic=weapon.get(DataComponents.KINETIC_WEAPON);
@@ -71,7 +71,7 @@ public final class DamageHud {
         if(mc.level!=level||mc.player==null||!mc.player.isAlive()){level=mc.level;pending.clear();spearSnapshot=null;displayTicks=0;hit="";return;}
         updateSpearSnapshot(mc);
         if(displayTicks>0)displayTicks--;
-        if(!MacePvPMod.DAMAGE_CONFIG.current().hitEnabled()){pending.clear();displayTicks=0;return;}
+        if(!MacePvPMod.DAMAGE_CONFIG.current().enabled()||!MacePvPMod.DAMAGE_CONFIG.current().hitEnabled()){pending.clear();displayTicks=0;return;}
         Iterator<Pending> iterator=pending.values().iterator();
         while(iterator.hasNext()){Pending p=iterator.next();p.ticks--;if(p.confirmed)p.confirmedTicks++;float observed=p.before-p.target.getHealth();
             if(p.confirmed&&p.calculated){show(DamageText.format(MacePvPMod.DAMAGE_CONFIG.current().hitTemplate(),p.blocks,p.amount),p.amount,p.critical);iterator.remove();}
@@ -85,5 +85,5 @@ public final class DamageHud {
     static boolean visibleHitCritical(){return displayTicks>0&&hitCritical;}
     static boolean showFall(double distance){return showFall(distance,1.5);}
     static boolean showFall(double distance,double threshold){return Double.isFinite(distance)&&Double.isFinite(threshold)&&distance>threshold;}
-    public static void extract(GuiGraphicsExtractor g,DeltaTracker delta){var mc=Minecraft.getInstance();var p=mc.player;if(p==null||mc.level==null||mc.gui.screen()!=null||mc.gui.hud.isHidden()||!p.isAlive()||p.isSpectator())return;var c=MacePvPMod.DAMAGE_CONFIG.current();double fallBlocks=p.fallDistance;if(c.fallEnabled()&&showFall(fallBlocks,c.fallThreshold()))HudRenderer.textColor(g,DamageText.format(c.fallTemplate(),fallBlocks,0),MacePvPMod.HUD_CONFIG.current().fall(),c.fallColors().color(fallBlocks));if(c.hitEnabled()&&displayTicks>0){Component text=Component.literal(hit);if(c.boldCriticalDamage()&&hitCritical)text=text.copy().withStyle(ChatFormatting.BOLD);HudRenderer.textColor(g,text,MacePvPMod.HUD_CONFIG.current().hit(),c.hitColors().color(hitAmount));}}
+    public static void extract(GuiGraphicsExtractor g,DeltaTracker delta){var mc=Minecraft.getInstance();var p=mc.player;if(p==null||mc.level==null||mc.gui.screen()!=null||mc.gui.hud.isHidden()||!p.isAlive()||p.isSpectator())return;var c=MacePvPMod.DAMAGE_CONFIG.current();if(!c.enabled())return;double fallBlocks=p.fallDistance;if(c.fallEnabled()&&showFall(fallBlocks,c.fallThreshold()))HudRenderer.textColor(g,DamageText.format(c.fallTemplate(),fallBlocks,0),MacePvPMod.HUD_CONFIG.current().fall(),c.fallColors().color(fallBlocks));if(c.hitEnabled()&&displayTicks>0){Component text=Component.literal(hit);if(c.boldCriticalDamage()&&hitCritical)text=text.copy().withStyle(ChatFormatting.BOLD);HudRenderer.textColor(g,text,MacePvPMod.HUD_CONFIG.current().hit(),c.hitColors().color(hitAmount));}}
 }

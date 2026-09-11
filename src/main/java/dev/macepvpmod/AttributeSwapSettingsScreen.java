@@ -46,8 +46,9 @@ public final class AttributeSwapSettingsScreen extends Screen {
                 .bounds(left, 200, 300, 20).build());
         save = addRenderableWidget(Button.builder(Component.literal("Save"), b -> {
             try {
-                MacePvPMod.ATTRIBUTE_SWAP_CONFIG.save(new AttributeSwapConfig(1, visual, sound,
-                        net.minecraft.resources.Identifier.parse(soundId).toString(), weaponOnly, successfulHitOnly));
+                MacePvPMod.ATTRIBUTE_SWAP_CONFIG.save(new AttributeSwapConfig(2, visual, sound,
+                        net.minecraft.resources.Identifier.parse(soundId).toString(), weaponOnly, successfulHitOnly,
+                        MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().enabled()));
                 onClose();
             } catch (IOException e) { error = "Could not save settings."; }
         }).bounds(left, height - 28, 146, 20).build());

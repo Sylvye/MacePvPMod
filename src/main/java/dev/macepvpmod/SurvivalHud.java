@@ -23,6 +23,7 @@ public final class SurvivalHud {
         if (p == null || mc.level == null || mc.gui.hud.isHidden() || mc.gui.screen() != null
                 || !p.isAlive() || p.isSpectator()) return;
         var c = MacePvPMod.SURVIVAL_CONFIG.current();
+        if (!c.enabled()) return;
         if (c.retotemEnabled() && SurvivalState.needsRetotem(available.totem(), p.getOffhandItem().isEmpty()))
             HudRenderer.text(g, c.retotemText(), MacePvPMod.HUD_CONFIG.current().retotem(), 0);
         int state = SurvivalState.healingState(p.getHealth(), p.getMaxHealth(), p.getFoodData().getSaturationLevel(), c);

@@ -49,6 +49,7 @@ public final class AttributeSwaps {
     }
     private static void register() {
         AttributeSwapConfig config = MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current();
+        if (!config.enabled()) return;
         if (config.visualEnabled()) displayTicks = 60;
         if (config.soundEnabled()) playSound(config.soundId());
     }
@@ -62,7 +63,7 @@ public final class AttributeSwaps {
         TRACKER.reset(); attackSnapshot = false;
         var mc = Minecraft.getInstance();
         if (player != mc.player || level != mc.level || mc.player == null || !mc.player.isAlive()
-                || mc.player.isSpectator() || !MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().visualEnabled()) {
+                || mc.player.isSpectator() || !MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().enabled() || !MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().visualEnabled()) {
             displayTicks = 0;
             player = mc.player; level = mc.level;
         } else if (!mc.isPaused() && displayTicks > 0) displayTicks--;
@@ -70,7 +71,7 @@ public final class AttributeSwaps {
     static boolean shouldRender(Minecraft mc) {
         return displayTicks > 0 && player == mc.player && level == mc.level && mc.player != null && mc.level != null
                 && mc.player.isAlive() && !mc.player.isSpectator() && mc.gui.screen() == null
-                && !mc.gui.hud.isHidden() && MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().visualEnabled();
+                && !mc.gui.hud.isHidden() && MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().enabled() && MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current().visualEnabled();
     }
     public static void extract(GuiGraphicsExtractor g, DeltaTracker delta) {
         if (shouldRender(Minecraft.getInstance())) HudRenderer.text(g, HUD_TEXT, MacePvPMod.HUD_CONFIG.current().attributeSwap(), 0);

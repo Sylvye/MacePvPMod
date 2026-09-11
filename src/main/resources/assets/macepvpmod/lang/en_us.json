@@ -1,4 +1,9 @@
 {
   "key.macepvpmod.settings": "Open MacePvPMod settings",
-  "key.category.macepvpmod.settings": "MacePvPMod"
+  "key.category.macepvpmod.settings": "MacePvPMod",
+  "macepvpmod.settings.title": "MacePvPMod Settings",
+  "macepvpmod.settings.apply": "Apply",
+  "macepvpmod.settings.cancel": "Cancel",
+  "macepvpmod.settings.reset_all": "Reset all settings",
+  "macepvpmod.settings.reset_section": "Reset this section"
 }

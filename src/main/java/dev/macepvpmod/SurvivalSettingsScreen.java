@@ -43,8 +43,8 @@ public final class SurvivalSettingsScreen extends Screen {
         return endInterval <= startInterval;
     }
     private SurvivalConfig draft() {
-        return new SurvivalConfig(1, enabled[0], enabled[1], texts[0], colors[0], sizes[0], x[0], y[0],
-                texts[1], colors[1], texts[2], colors[2], texts[3], colors[3], sizes[1], x[1], y[1], health, saturation, harpVolume, bassVolume, harpPitch, bassPitch, startInterval, endInterval, healingItems, saturationItems, sounds).validated();
+        return new SurvivalConfig(2, enabled[0], enabled[1], texts[0], colors[0], sizes[0], x[0], y[0],
+                texts[1], colors[1], texts[2], colors[2], texts[3], colors[3], sizes[1], x[1], y[1], health, saturation, harpVolume, bassVolume, harpPitch, bassPitch, startInterval, endInterval, healingItems, saturationItems, sounds,MacePvPMod.SURVIVAL_CONFIG.current().enabled()).validated();
     }
     private String stateLabel() { return state == 1 ? "Low health" : state == 2 ? "Low saturation" : "Health + saturation"; }
     @Override protected void init() {

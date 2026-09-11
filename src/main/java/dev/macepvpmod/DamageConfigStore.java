@@ -22,6 +22,7 @@ public final class DamageConfigStore {
             // Overlay saved fields onto defaults so newly added settings remain usable.
             JsonObject merged = GSON.toJsonTree(DamageConfig.defaults()).getAsJsonObject();
             for (var entry : saved.entrySet()) {
+                if (entry.getKey().equals("schemaVersion")) continue;
                 if (merged.has(entry.getKey())) {
                     JsonElement value = entry.getValue();
                     JsonElement expected = merged.get(entry.getKey());
@@ -35,6 +36,7 @@ public final class DamageConfigStore {
                     merged.add(entry.getKey(), value);
                 }
             }
+            merged.addProperty("schemaVersion", 2);
             current = GSON.fromJson(merged, DamageConfig.class).validated();
         } catch (Exception error) {
             LOG.warn("Could not load damage counter settings; using defaults", error);
