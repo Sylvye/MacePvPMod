@@ -30,6 +30,9 @@ public record ColorScale(ColorMode mode, int flatColor, double minimum, double m
             throw new IllegalArgumentException("Gradient keys must include both endpoints");
         return new ColorScale(mode,flatColor,minimum,maximum,List.copyOf(copy));
     }
+    public ColorScale withDomain(double minimum,double maximum) {
+        return new ColorScale(mode,flatColor,minimum,maximum,keys);
+    }
     public int color(double value) {
         if (mode == ColorMode.FLAT || !Double.isFinite(value)) return flatColor;
         double position = Math.clamp((value-minimum)/(maximum-minimum),0,1);

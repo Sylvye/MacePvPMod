@@ -5,6 +5,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ColorScaleTest {
+    @Test void domainOverridePreservesStopsAndOriginalScale() {
+        var original=ColorScale.damageDefault();
+        var effective=original.withDomain(0,20);
+        assertEquals(20,effective.maximum());
+        assertEquals(original.keys(),effective.keys());
+        assertEquals(80,original.maximum());
+    }
     @Test void defaultsHaveExpectedKeysAndEndpoints() {
         var scale=ColorScale.damageDefault().validated();
         assertEquals(0xffffff,scale.color(-1));

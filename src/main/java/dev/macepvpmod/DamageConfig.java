@@ -4,6 +4,9 @@ public record DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor
         int fallX, int fallY, boolean hitEnabled, int hitColor, double hitSize, int hitX, int hitY, int hitSeconds, boolean calculatedDamage, String fallTemplate, String hitTemplate, double fallThreshold,
         ColorScale fallColors, ColorScale hitColors, boolean maceEnabled, boolean spearEnabled,
         boolean swordAxeEnabled, boolean useEnemyGear, boolean boldCriticalDamage, boolean enabled) {
+    public ColorScale effectiveHitColors() {
+        return useEnemyGear ? hitColors.withDomain(0,20) : hitColors;
+    }
     public DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor, double fallSize,
             int fallX, int fallY, boolean hitEnabled, int hitColor, double hitSize, int hitX, int hitY, int hitSeconds, boolean calculatedDamage, String fallTemplate, String hitTemplate, double fallThreshold,
             ColorScale fallColors, ColorScale hitColors, boolean maceEnabled, boolean spearEnabled,
