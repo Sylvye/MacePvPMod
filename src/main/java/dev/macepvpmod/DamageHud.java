@@ -65,7 +65,7 @@ public final class DamageHud {
         var mc=Minecraft.getInstance();var config=MacePvPMod.DAMAGE_CONFIG.current();
         if(mc.player==null||mc.level==null||!config.enabled()||!config.hitEnabled()||!config.spearEnabled())return;
         ItemStack weapon=mc.player.getMainHandItem().copy();if(DamageWeapon.of(weapon)!=DamageWeapon.SPEAR)return;
-        recentJab=new JabSnapshot(weapon,mc.player.getAttributeValue(Attributes.ATTACK_DAMAGE),0);
+        recentJab=new JabSnapshot(weapon,MaceDamageCalculator.effectiveAttackDamage(mc.player),0);
         var range=mc.player.getAttackRangeWith(weapon);
         var hits=ProjectileUtil.getHitEntitiesAlong(mc.player,range,e->PiercingWeapon.canHitEntity(mc.player,e),ClipContext.Block.COLLIDER)
                 .map(block->List.<net.minecraft.world.phys.EntityHitResult>of(),entities->entities);

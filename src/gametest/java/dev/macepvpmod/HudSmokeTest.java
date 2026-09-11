@@ -97,9 +97,11 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 check(!DamageHud.visibleHitCritical(),"A falling sprint attack must not be marked critical");
                 for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
                 p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));
+                p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH,200,0));
+                p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS,200,0));
                 p.setDeltaMovement(0,0,3);DamageHud.tick(mc);
                 var piercing=p.getMainHandItem().get(net.minecraft.core.component.DataComponents.PIERCING_WEAPON);
-                double jabDamage=p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)
+                double jabDamage=MaceDamageCalculator.effectiveAttackDamage(p)
                         +MaceDamageCalculator.enchantmentBonus(p.getMainHandItem(),zombie);
                 DamageHud.spearJab(piercing);
                 DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
@@ -108,6 +110,7 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 check(!DamageHud.visibleHit().isEmpty(),"A newer prediction must not replace a confirmed spear hit");
                 check(Math.abs(DamageHud.visibleHitAmount()-jabDamage)<.001,"A spear jab must not inherit velocity damage");
                 check(!DamageHud.visibleHitCritical(),"Spear damage must never be marked critical");
+                p.removeEffect(net.minecraft.world.effect.MobEffects.STRENGTH);p.removeEffect(net.minecraft.world.effect.MobEffects.WEAKNESS);
                 for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
                 AttributeSwaps.endTick();p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.MACE));
                 p.setSprinting(false);p.setOnGround(false);p.fallDistance=1;
