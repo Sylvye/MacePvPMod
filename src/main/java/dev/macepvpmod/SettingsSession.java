@@ -1,6 +1,7 @@
 package dev.macepvpmod;
 
 import java.io.IOException;
+import java.lang.reflect.RecordComponent;
 
 /** One isolated draft spanning every settings file. */
 final class SettingsSession {
@@ -43,17 +44,7 @@ final class SettingsSession {
         } catch (IllegalArgumentException error) { return error.getMessage(); }
     }
 
-    void refreshFocusedEdits() {
-        var p=MacePvPMod.CONFIG.current();if(!p.equals(originalPitch))pitch=new PitchConfig(1,pitch.enabled(),p.width(),p.thickness(),p.color(),p.opacity(),p.targetPitch(),p.sensitivity(),p.maxDisplacement(),p.thirdPerson());
-        var d=MacePvPMod.DAMAGE_CONFIG.current();if(!d.equals(originalDamage))damage=copyDamage(d,damage.enabled());
-        var a=MacePvPMod.ATTRIBUTE_SWAP_CONFIG.current();if(!a.equals(originalSwap))swap=new AttributeSwapConfig(2,a.visualEnabled(),a.soundEnabled(),a.soundId(),a.weaponOnly(),a.successfulHitOnly(),swap.enabled());
-        var s=MacePvPMod.SURVIVAL_CONFIG.current();if(!s.equals(originalSurvival))survival=copySurvival(s,survival.enabled());
-        var r=MacePvPMod.REACH_OUTLINE_CONFIG.current();if(!r.equals(originalReach))reach=new ReachOutlineConfig(1,reach.enabled(),r.color(),r.intensity(),r.thickness(),r.topFacesOnly(),r.hardToReachMode(),r.minimumReachableArea());
-        var h=MacePvPMod.HUD_CONFIG.current();if(!h.equals(originalHud))hud=h;
-    }
-
     void apply() throws IOException {
-        refreshFocusedEdits();
         String error = validation();
         if (!error.isEmpty()) throw new IOException(error);
         try {
@@ -76,13 +67,23 @@ final class SettingsSession {
     }
 
     void discard() {
-        try { MacePvPMod.CONFIG.save(originalPitch); } catch(IOException ignored){}
-        try { MacePvPMod.DAMAGE_CONFIG.save(originalDamage); } catch(IOException ignored){}
-        try { MacePvPMod.ATTRIBUTE_SWAP_CONFIG.save(originalSwap); } catch(IOException ignored){}
-        try { MacePvPMod.SURVIVAL_CONFIG.save(originalSurvival); } catch(IOException ignored){}
-        try { MacePvPMod.HUD_CONFIG.save(originalHud); } catch(IOException ignored){}
-        try { MacePvPMod.REACH_OUTLINE_CONFIG.save(originalReach); } catch(IOException ignored){}
+        // Draft-only session: nothing has reached a store yet.
     }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends Record> T with(T record,String field,Object value) {
+        try {
+            RecordComponent[] parts=record.getClass().getRecordComponents();Object[] values=new Object[parts.length];Class<?>[] types=new Class<?>[parts.length];boolean found=false;
+            for(int i=0;i<parts.length;i++){types[i]=parts[i].getType();values[i]=parts[i].getAccessor().invoke(record);if(parts[i].getName().equals(field)){values[i]=value;found=true;}}
+            if(!found)throw new IllegalArgumentException("Unknown setting: "+field);
+            return (T)record.getClass().getDeclaredConstructor(types).newInstance(values);
+        } catch(ReflectiveOperationException e){throw new IllegalStateException("Could not update "+field,e);}
+    }
+    void pitch(String field,Object value){pitch=with(pitch,field,value);}
+    void damage(String field,Object value){damage=with(damage,field,value);}
+    void swap(String field,Object value){swap=with(swap,field,value);}
+    void survival(String field,Object value){survival=with(survival,field,value);}
+    void reach(String field,Object value){reach=with(reach,field,value);}
 
     void resetAll() {
         pitch = PitchConfig.defaults(); damage = DamageConfig.defaults(); swap = AttributeSwapConfig.defaults();

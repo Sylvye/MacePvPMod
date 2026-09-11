@@ -8,7 +8,7 @@ final class SettingsControls {
         return new AbstractSliderButton(0,0,width,20,Component.empty(),Math.clamp((initial-min)/(max-min),0,1)) {
             { updateMessage(); }
             double actual() { return Math.clamp(Math.round((min+value*(max-min))/step)*step,min,max); }
-            protected void updateMessage() { setMessage(Component.literal(label+": "+String.format(Locale.ROOT,step<1?"%.2f":"%.0f",actual()))); }
+            protected void updateMessage() { setMessage(Component.literal((label.isBlank()?"":label+" ")+String.format(Locale.ROOT,step<1?"%.2f":"%.0f",actual()))); }
             protected void applyValue() { setter.accept(actual()); }
         };
     }
