@@ -15,6 +15,16 @@ public final class HudSmokeTest implements FabricClientGameTest {
             context.runOnClient(mc -> {
                 var p = mc.player;
                 var defaults = PitchConfig.defaults();
+                var vectorDefaults = VectorsConfig.defaults();
+                check(VectorsHud.shouldRender(mc, vectorDefaults), "Vectors should render during normal play");
+                check(!VectorsHud.equipmentAllowed(p,vectorDefaults), "Filtered reticle should require an elytra or spear");
+                p.setItemSlot(EquipmentSlot.CHEST,new ItemStack(Items.ELYTRA));
+                check(VectorsHud.equipmentAllowed(p,vectorDefaults), "Equipped elytra should allow the reticle");
+                p.setItemSlot(EquipmentSlot.CHEST,ItemStack.EMPTY);p.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.IRON_SPEAR));
+                check(VectorsHud.equipmentAllowed(p,vectorDefaults), "Offhand spear should allow the reticle");
+                p.setItemSlot(EquipmentSlot.OFFHAND,ItemStack.EMPTY);
+                mc.gui.hud.toggle(); check(!VectorsHud.shouldRender(mc, vectorDefaults), "F1 must hide Vectors"); mc.gui.hud.toggle();
+                mc.gui.setScreen(new SettingsScreen(null)); check(!VectorsHud.shouldRender(mc, vectorDefaults), "Menus must hide Vectors"); mc.gui.setScreen(null);
                 int swapSlot = (p.getInventory().getSelectedSlot() + 1) % 9;
                 p.getInventory().setItem(swapSlot, new ItemStack(Items.NETHERITE_SWORD));
                 AttributeSwaps.click();

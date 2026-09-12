@@ -17,6 +17,7 @@ public final class MacePvPMod implements ClientModInitializer {
     public static final SurvivalConfigStore SURVIVAL_CONFIG = new SurvivalConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-survival.json"));
     public static final HudConfigStore HUD_CONFIG = new HudConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-hud.json"));
     public static final ReachOutlineConfigStore REACH_OUTLINE_CONFIG = new ReachOutlineConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-reach-outlines.json"));
+    public static final VectorsConfigStore VECTORS_CONFIG = new VectorsConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod-vectors.json"));
     @Override public void onInitializeClient() {
         CONFIG.load();
         SURVIVAL_CONFIG.load();
@@ -26,6 +27,7 @@ public final class MacePvPMod implements ClientModInitializer {
         DAMAGE_CONFIG.load();
         HUD_CONFIG.load();
         REACH_OUTLINE_CONFIG.load();
+        VECTORS_CONFIG.load();
         ReachOutlines.register();
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
                 Identifier.fromNamespaceAndPath("macepvpmod", "attribute_swap"), AttributeSwaps::extract);
@@ -40,6 +42,8 @@ public final class MacePvPMod implements ClientModInitializer {
         });
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
                 Identifier.fromNamespaceAndPath("macepvpmod", "elytra_pitch_bar"), PitchHud::extract);
+        HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
+                Identifier.fromNamespaceAndPath("macepvpmod", "vectors"), VectorsHud::extract);
         KeyMapping settings = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.macepvpmod.settings", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(),
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath("macepvpmod", "settings"))));
