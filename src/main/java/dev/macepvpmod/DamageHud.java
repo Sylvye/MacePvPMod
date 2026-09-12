@@ -35,9 +35,9 @@ public final class DamageHud {
     private static JabSnapshot recentJab;
     private DamageHud() {}
     private static final class Pending {
-        final LivingEntity target; final float before; final double blocks, amount; final boolean calculated, critical;
+        final LivingEntity target; final float before; final double blocks, amount; final boolean calculated, critical, resetsFallDistance;
         int ticks=40, confirmedTicks; boolean confirmed, totem;
-        Pending(LivingEntity target,double blocks,double amount,boolean calculated,boolean critical){this.target=target;before=target.getHealth();this.blocks=blocks;this.amount=amount;this.calculated=calculated;this.critical=critical;}
+        Pending(LivingEntity target,double blocks,double amount,boolean calculated,boolean critical,boolean resetsFallDistance){this.target=target;before=target.getHealth();this.blocks=blocks;this.amount=amount;this.calculated=calculated;this.critical=critical;this.resetsFallDistance=resetsFallDistance;}
     }
     private static void remember(Pending candidate) {
         pending.compute(candidate.target.getId(),(id,current)->current!=null&&current.confirmed?current:candidate);
@@ -51,7 +51,8 @@ public final class DamageHud {
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,weapon,target);
         boolean critical=DamageWeapon.of(weapon)!=DamageWeapon.SPEAR
                 && MaceDamageCalculator.criticalAtAttack(mc.player,target,AttributeSwaps.attackCooldown(mc));
-        remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),critical));
+        boolean smash=DamageWeapon.of(weapon)==DamageWeapon.MACE&&mc.player.fallDistance>1.5&&!mc.player.isFallFlying();
+        remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),critical,smash));
     }
     private record ChargeSnapshot(ItemStack weapon,int duration,Vec3 look,double attackerForward,int age) {}
     private record JabSnapshot(ItemStack weapon,double baseDamage,int age) {}
@@ -59,7 +60,7 @@ public final class DamageHud {
         var mc=Minecraft.getInstance();var config=MacePvPMod.DAMAGE_CONFIG.current();if(mc.player==null)return;
         double amount=snapshot.baseDamage()+MaceDamageCalculator.enchantmentBonus(snapshot.weapon(),target);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,snapshot.weapon(),target);
-        remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),false));
+        remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),false,false));
     }
     public static void spearJab(PiercingWeapon piercing) {
         var mc=Minecraft.getInstance();var config=MacePvPMod.DAMAGE_CONFIG.current();
@@ -81,14 +82,14 @@ public final class DamageHud {
         double amount=SpearDamageMath.raw(mc.player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE),relative,kinetic.damageMultiplier());
         amount+=MaceDamageCalculator.enchantmentBonus(snapshot.weapon(),target);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,snapshot.weapon(),target);
-        remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),false));
+        remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),false,false));
     }
     public static void damageEvent(ClientboundDamageEventPacket packet){var mc=Minecraft.getInstance();if(mc.player==null||packet.sourceCauseId()!=mc.player.getId())return;Pending p=pending.get(packet.entityId());
         if(p==null&&mc.level!=null&&mc.level.getEntity(packet.entityId()) instanceof LivingEntity target){
             if(recentJab!=null&&recentJab.age()<40&&(recentCharge==null||recentJab.age()<=recentCharge.age()))registerSpearJab(target,recentJab);
             else if(recentCharge!=null&&recentCharge.age()<40){KineticWeapon kinetic=recentCharge.weapon().get(DataComponents.KINETIC_WEAPON);if(kinetic!=null)registerSpearCharge(target,recentCharge,kinetic,false);}
             p=pending.get(packet.entityId());}
-        if(p!=null)p.confirmed=true;}
+        if(p!=null){p.confirmed=true;if(p.resetsFallDistance)mc.player.resetFallDistance();}}
     private static void evaluateSpearCharge(Minecraft mc) {
         var config=MacePvPMod.DAMAGE_CONFIG.current();
         if(recentJab!=null)recentJab=new JabSnapshot(recentJab.weapon(),recentJab.baseDamage(),recentJab.age()+1);

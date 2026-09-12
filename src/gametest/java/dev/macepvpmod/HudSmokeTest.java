@@ -99,8 +99,9 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 DamageHud.attacked(zombie);
                 DamageHud.tick(mc);
                 check(DamageHud.visibleHit().isEmpty(), "Calculated attacks must still be confirmed");
-                p.fallDistance = 0; p.setItemSlot(EquipmentSlot.MAINHAND, plain);
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
+                check(p.fallDistance == 0, "A confirmed mace smash must reset client fall distance");
+                p.setItemSlot(EquipmentSlot.MAINHAND, plain);
                 DamageHud.tick(mc);
                 check(DamageHud.visibleHit().equals(String.format(java.util.Locale.ROOT, "%.1f damage / 8.0 blocks", expected)),
                         "Calculated damage must use attack-time fall/enchantment snapshot without health loss");
