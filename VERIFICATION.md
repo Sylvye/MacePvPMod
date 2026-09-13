@@ -54,3 +54,11 @@ Limits: Vulkan was not tested. Actual window resizing, spectator mode, the unbou
 - `./gradlew build runClientGameTest`: passed. New unit tests cover shallow descent, speed changes, level flight, ascent, and resets.
 - Client regression checks that shallow elytra descent stays capped at 1 and hidden, normal falling accumulates, vanilla resets clear it, and a player-position packet clears pre-teleport distance.
 - Mace calculations, the live HUD, and hit-template fall-distance snapshots all use Minecraft's damage accumulator. Live multiplayer flight has not been manually tested.
+
+## Vectors HUD and confirmed mace-smash reset — September 13, 2026
+
+- `./gradlew test build runClientGameTest`: passed with 78 unit tests and all three client game tests. The unit suite includes Vectors math, template validation, defaults and bounds, persistence, v1 migration, invalid-file backup, and equipment-filter rules; the client smoke test covers normal rendering, elytra/spear filter acceptance, F1/menu hiding, and the confirmed smash reset.
+- Vectors defaults and behavior were checked against the implementation: grounded vertical velocity is ignored, airborne velocity contributes to magnitude and direction, magnitude is reported in blocks/second to one decimal place, the reticle uses camera-relative projection and screen-edge clamping, and the velocity readout remains independent of reticle filters and the stationary threshold.
+- Verified all Vectors controls: module/output toggles, elytra and main/offhand spear filters with OR behavior, Circle/Crosshair/Star icons, size 3–31, opacity 5–100%, stationary threshold 0–20 blocks/second, `{magnitude}` validation, velocity placement in HUD Studio, and flat/gradient velocity color scales over the 0–40 default domain.
+- Verified that a matching server damage event resets the local fall-distance accumulator only for a non-gliding mace smash above 1.5 blocks, while the hit message retains the attack-time fall-distance snapshot. Unconfirmed attacks and non-smash weapon paths do not reset it.
+- Limits: the checks use controlled client entities and injected client packet handling; live multiplayer combat, server-specific damage rules, and live multiplayer flight remain untested.

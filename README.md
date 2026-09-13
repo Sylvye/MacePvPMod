@@ -2,13 +2,16 @@
 
 MacePvPMod is a client-only Fabric HUD and quality-of-life mod for Minecraft **26.2**, designed for mace PvP, elytra combat, and survival awareness. It provides configurable visual and audio feedback without changing gameplay mechanics, flight, server-side damage, targeting, or network packets.
 
-The mod includes five modules:
+The mod includes six modules plus the shared HUD Studio workspace:
 
-- **HUD** — central editor for overlay placement, size, colors, and previews.
 - **Elytra Pitch Bar** — a configurable on-screen pitch reference for repeatable elytra approaches and mace dives.
 - **Damage Counter** — displays accumulated fall distance and confirmed mace, spear, sword, or axe damage, with reported and estimated calculation modes.
 - **Attribute Swaps** — gives visual and sound feedback when a hotbar selection changes the player’s active attack attributes.
 - **Survival instincts** — warns when a totem should be moved to the offhand and displays configurable low-health and low-saturation alerts, including optional audio cues.
+- **Reach Outlines** — outlines reachable faces of placeable blocks and distinguishes faces that are difficult to reach.
+- **Vectors** — shows a motion-direction reticle and a configurable velocity readout.
+
+**HUD Studio** is the shared editor for overlay placement, size, colors, and previews.
 
 Created by **Sylvye**. Source code: [github.com/Sylvye/MacePvPMod](https://github.com/Sylvye/MacePvPMod).
 
@@ -24,9 +27,9 @@ The mod is client-only
 
 Open **Mods → MacePvPMod → Configure**, or assign **Open MacePvPMod settings** under **Options → Controls → Key Binds → MacePvPMod**. The shortcut starts unbound.
 
-Select a module from the directory. Each has a separate settings page and configuration file.
+Select a module from the directory. Each module has its own settings page and configuration file; HUD Studio edits the shared overlay styles.
 
-### HUD
+### HUD Studio
 
 Select an element, then choose **Drag / resize preview**. Drag the text or bar to move it, drag its bottom-right handle to resize it, or use arrow keys to nudge it. The controls page also provides numeric offsets and size, per-element reset, and color pickers with hue, saturation/brightness, presets, and optional hex entry. The pitch bar has width, thickness, and opacity controls.
 
@@ -48,8 +51,9 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 
 - **Fall distance:** appears above the configurable **Fall threshold (blocks)**, set to 1.5 by default, at 14 GUI pixels below the crosshair. Shows Minecraft's damage-relevant fall distance. Slow elytra descents are capped at 1 block by vanilla and remain hidden at the default threshold. Vanilla fall-ending conditions and server teleports or position corrections reset the counter.
 - **Weapon damage:** independently enable mace (default on), spear (default on), and sword & axe (default off). Choose **Damage: Reported** (default) or **Damage: Calculated**. Both show damage points (2 points = 1 heart) after a server-confirmed hit on a living entity, for 3 seconds by default.
-- Each feature has its own enable toggle and message template. Hit duration is configurable from 1–10 seconds. Appearance is edited in **HUD**.
+- Each feature has its own enable toggle and message template. Hit duration is configurable from 1–10 seconds. Appearance is edited in **HUD Studio**.
 - Fall defaults to `{blocks} blocks`; hit defaults to `{damage} damage`. Hit messages also support `{blocks}` for the same Minecraft fall distance captured at attack time. Values use one decimal place. For example, `{damage} damage from {blocks} blocks` becomes `18.0 damage from 12.5 blocks`.
+- A non-gliding mace smash is identified at attack time when fall distance is strictly above 1.5 blocks. After the matching server damage event confirms it, the local fall-distance accumulator is reset. The hit message still uses the attack-time snapshot, so the reset does not change its `{blocks}` value. Spear, sword, axe, and elytra-gliding attacks do not trigger this reset.
 - Variable insertion buttons, explanations, and live examples appear beside the fields. Blank messages and unsupported variables block saving. Each new hit replaces the previous hit message.
 - **Save** applies changes; **Cancel** or Escape discards them. Damage settings persist separately in `config/macepvpmod-damage.json`.
 
@@ -72,9 +76,22 @@ The Minecraft 26.2 formula, verified against the bundled `MaceItem` and `Player`
 
 Existing configurations retain reported mode. Non-living targets are not tracked.
 
+### Vectors
+
+Vectors has a module **Enabled** switch and two independent outputs:
+
+- **Motion reticle:** **Show reticle** controls it. **Wearing elytra** filters for an elytra in the chest slot, and **Holding spear** filters for a spear in either hand. When both filters are enabled, either condition is sufficient; when both are disabled, the reticle is unrestricted. The reticle is hidden below **Stationary threshold** speed, measured in blocks/second. It points toward the player’s current velocity relative to the camera and is clamped inside the screen using the configured **Size** margin.
+- **Velocity readout:** **Show velocity** controls it. It is displayed independently of the reticle’s equipment filters and stationary threshold. **Message** must contain the only supported variable, `{magnitude}`; the value is formatted to one decimal place. The readout uses a configurable **Velocity colors** scale and is placed and scaled through **HUD Studio → Velocity**.
+
+Reticle settings are **Icon** (`Circle`, `Crosshair`, or `Star`), **Size** (3–31 GUI pixels), **Opacity** (5–100%), **Reticle color**, and the stationary threshold (0–20 blocks/second). The default is Circle, size 7, white, 90% opacity, and a 0.05 blocks/second threshold. The default reticle filters both require an equipped elytra or a spear in either hand. The default velocity message is `{magnitude} blocks/s`.
+
+The displayed magnitude is the length of the effective client movement vector multiplied by 20, in blocks/second. While grounded, vertical movement is ignored; while airborne, vertical movement contributes to both the magnitude and direction. The default velocity color scale is a gradient over 0–40 blocks/second: `#55FF88` at the low end, `#FFFF55` at the midpoint, and `#FF5555` at the high end. The color editor supports Flat or Gradient mode, a flat color, domain minimum/maximum, and ordered gradient keys with editable colors and intermediate positions.
+
+Vectors is hidden while no world/player is loaded, a menu is open, the HUD is hidden (F1), the player is dead, or the player is spectating. Settings are stored in `config/macepvpmod-vectors.json`. Version 1 files migrate to version 2 by retaining supported values, enabling both equipment filters, and removing the old radius field; invalid files fall back to defaults and are backed up.
+
 ### Attribute Swaps
 
-Detects an attribute-changing hotbar swap during combat and optionally shows an **Attribute swap!** HUD message for three seconds and plays a configurable sound. By default, it registers only after a successful hit and only when swapping to a weapon; both filters can be disabled. Visual and sound feedback can be controlled separately. The default sound is `minecraft:entity.experience_orb.pickup`. Move, resize, and color the text through **HUD → Attribute swap** or **Edit in HUD**. It appears in individual and global previews and does not use the actionbar.
+Detects an attribute-changing hotbar swap during combat and optionally shows an **Attribute swap!** HUD message for three seconds and plays a configurable sound. By default, it registers only after a successful hit and only when swapping to a weapon; both filters can be disabled. Visual and sound feedback can be controlled separately. The default sound is `minecraft:entity.experience_orb.pickup`. Move, resize, and color the text through **HUD Studio → Attribute swap** or **Edit in HUD**. It appears in individual and global previews and does not use the actionbar.
 
 ### Survival instincts
 
