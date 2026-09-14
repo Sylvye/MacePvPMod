@@ -84,4 +84,18 @@ class SurvivalTest {
         assertEquals(SurvivalConfig.defaults(), store.current());
         try (var files = Files.list(directory)) { assertEquals(2, files.count()); }
     }
+    @Test void damageIndicatorDefaultsMigratePersistAndClamp() throws Exception {
+        var file = directory.resolve("survival.json");
+        Files.writeString(file, "{}");
+        var store = new SurvivalConfigStore(file); store.load();
+        assertTrue(store.current().damageIndicatorEnabled());
+        assertEquals(12, store.current().damageIndicatorThickness());
+        assertEquals(.22, store.current().damageIndicatorOpacity());
+        assertEquals(0xff2020, store.current().damageIndicatorColor());
+        Files.writeString(file, "{\"damageIndicatorThickness\":999,\"damageIndicatorOpacity\":2,\"damageIndicatorColor\":-1}");
+        store.load(); store.save(store.current());
+        assertEquals(80, store.current().damageIndicatorThickness());
+        assertEquals(1, store.current().damageIndicatorOpacity());
+        assertEquals(0xffffff, store.current().damageIndicatorColor());
+    }
 }

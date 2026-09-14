@@ -4,36 +4,42 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Items;
 
 public final class VectorsHud {
+    private static final VelocitySmoother SMOOTHER=new VelocitySmoother();
     private VectorsHud() {}
     static boolean shouldRender(Minecraft mc, VectorsConfig c) {
         var p=mc.player;
         return c.enabled() && p!=null && mc.level!=null && mc.gui.screen()==null && !mc.gui.hud.isHidden()
                 && p.isAlive() && !p.isSpectator();
     }
-    static boolean equipmentAllowed(VectorsConfig c,boolean wearingElytra,boolean mainSpear,boolean offhandSpear) {
+    static boolean activityAllowed(VectorsConfig c,boolean gliding,boolean chargingSpear) {
         if(!c.elytraOnly()&&!c.spearOnly())return true;
-        return c.elytraOnly()&&wearingElytra || c.spearOnly()&&(mainSpear||offhandSpear);
+        return c.elytraOnly()&&gliding || c.spearOnly()&&chargingSpear;
     }
-    static boolean equipmentAllowed(Player player,VectorsConfig c) {
-        return equipmentAllowed(c,player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA),
-                player.getMainHandItem().is(ItemTags.SPEARS),player.getOffhandItem().is(ItemTags.SPEARS));
+    static boolean activityAllowed(Player player,VectorsConfig c) {
+        return activityAllowed(c,player.isFallFlying(),player.isUsingItem()&&player.getUseItem().is(ItemTags.SPEARS));
+    }
+    static void tick(Minecraft mc) {
+        var c=MacePvPMod.VECTORS_CONFIG.current();
+        if(!shouldRender(mc,c)||!c.reticleEnabled()||!activityAllowed(mc.player,c)) { SMOOTHER.reset();return; }
+        var velocity=VectorsMath.effectiveVelocity(mc.player.getDeltaMovement(),mc.player.onGround());
+        if(VectorsMath.stationary(velocity,c.stationaryThreshold())) { SMOOTHER.reset();return; }
+        SMOOTHER.sample(velocity,mc.player.onGround(),mc.player,mc.level);
     }
     public static void extract(GuiGraphicsExtractor g, DeltaTracker delta) {
-        var mc=Minecraft.getInstance();var c=MacePvPMod.VECTORS_CONFIG.current();if(!shouldRender(mc,c))return;
+        var mc=Minecraft.getInstance();var c=MacePvPMod.VECTORS_CONFIG.current();if(!shouldRender(mc,c)){SMOOTHER.reset();return;}
         var velocity=VectorsMath.effectiveVelocity(mc.player.getDeltaMovement(),mc.player.onGround());
         double magnitude=VectorsMath.magnitude(velocity);
-        boolean equipment=equipmentAllowed(mc.player,c);
-        if(c.reticleEnabled()&&equipment&&!VectorsMath.stationary(velocity,c.stationaryThreshold())) {
+        boolean activity=activityAllowed(mc.player,c);
+        boolean reticleActive=c.reticleEnabled()&&activity&&!VectorsMath.stationary(velocity,c.stationaryThreshold());
+        if(reticleActive) {
             float partial=delta.getGameTimeDeltaPartialTick(false);
-            var point=VectorsMath.project(velocity,mc.player.getYRot(partial),mc.player.getXRot(partial),
+            var point=VectorsMath.project(SMOOTHER.value(partial,velocity),mc.player.getYRot(partial),mc.player.getXRot(partial),
                     mc.options.fov().get(),g.guiWidth(),g.guiHeight(),c.size());
             drawIcon(g,(int)Math.round(point.x()),(int)Math.round(point.y()),c);
-        }
+        } else SMOOTHER.reset();
         if(c.velocityEnabled()) HudRenderer.textColor(g,VectorsText.format(c.velocityTemplate(),magnitude),
                 MacePvPMod.HUD_CONFIG.current().velocity(),c.velocityColors().color(magnitude));
     }

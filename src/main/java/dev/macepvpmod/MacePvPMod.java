@@ -50,6 +50,7 @@ public final class MacePvPMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             DamageHud.tick(client);
             SurvivalHud.tick(client);
+            VectorsHud.tick(client);
             AttributeSwaps.endTick();
             while (settings.consumeClick()) {
                 if (client.gui.screen() == null) client.gui.setScreen(new SettingsScreen(null));

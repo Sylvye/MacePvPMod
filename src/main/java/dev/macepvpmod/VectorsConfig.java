@@ -5,7 +5,7 @@ public record VectorsConfig(int schemaVersion, boolean enabled, boolean reticleE
                             VectorIcon icon, int size, int color, double opacity, double stationaryThreshold,
                             String velocityTemplate, ColorScale velocityColors) {
     public static VectorsConfig defaults() {
-        return new VectorsConfig(2, true, true, true, true, true, VectorIcon.CIRCLE, 7,
+        return new VectorsConfig(2, false, true, true, true, true, VectorIcon.CIRCLE, 7,
                 0xffffff, .9, .05, "{magnitude} blocks/s",
                 new ColorScale(ColorMode.GRADIENT, 0xffffff, 0, 40,
                         java.util.List.of(new GradientKey(0, 0x55ff88),

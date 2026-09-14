@@ -3,6 +3,7 @@ package dev.macepvpmod;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.CameraType;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -16,15 +17,21 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 var p = mc.player;
                 var defaults = PitchConfig.defaults();
                 var vectorDefaults = VectorsConfig.defaults();
-                check(VectorsHud.shouldRender(mc, vectorDefaults), "Vectors should render during normal play");
-                check(!VectorsHud.equipmentAllowed(p,vectorDefaults), "Filtered reticle should require an elytra or spear");
-                p.setItemSlot(EquipmentSlot.CHEST,new ItemStack(Items.ELYTRA));
-                check(VectorsHud.equipmentAllowed(p,vectorDefaults), "Equipped elytra should allow the reticle");
-                p.setItemSlot(EquipmentSlot.CHEST,ItemStack.EMPTY);p.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.IRON_SPEAR));
-                check(VectorsHud.equipmentAllowed(p,vectorDefaults), "Offhand spear should allow the reticle");
+                check(!VectorsHud.shouldRender(mc, vectorDefaults), "Vectors should be disabled by default");
+                var vectorsEnabled=new VectorsConfig(2,true,vectorDefaults.reticleEnabled(),vectorDefaults.velocityEnabled(),
+                        vectorDefaults.elytraOnly(),vectorDefaults.spearOnly(),vectorDefaults.icon(),vectorDefaults.size(),
+                        vectorDefaults.color(),vectorDefaults.opacity(),vectorDefaults.stationaryThreshold(),
+                        vectorDefaults.velocityTemplate(),vectorDefaults.velocityColors());
+                check(VectorsHud.shouldRender(mc, vectorsEnabled), "Enabled Vectors should render during normal play");
+                check(!VectorsHud.activityAllowed(p,vectorsEnabled), "Filtered reticle should require gliding or spear charging");
+                p.startFallFlying();
+                check(VectorsHud.activityAllowed(p,vectorsEnabled), "Active gliding should allow the reticle");
+                p.stopFallFlying();p.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.IRON_SPEAR));p.startUsingItem(InteractionHand.OFF_HAND);
+                check(VectorsHud.activityAllowed(p,vectorsEnabled), "Charging an offhand spear should allow the reticle");
+                p.stopUsingItem();
                 p.setItemSlot(EquipmentSlot.OFFHAND,ItemStack.EMPTY);
-                mc.gui.hud.toggle(); check(!VectorsHud.shouldRender(mc, vectorDefaults), "F1 must hide Vectors"); mc.gui.hud.toggle();
-                mc.gui.setScreen(new SettingsScreen(null)); check(!VectorsHud.shouldRender(mc, vectorDefaults), "Menus must hide Vectors"); mc.gui.setScreen(null);
+                mc.gui.hud.toggle(); check(!VectorsHud.shouldRender(mc, vectorsEnabled), "F1 must hide Vectors"); mc.gui.hud.toggle();
+                mc.gui.setScreen(new SettingsScreen(null)); check(!VectorsHud.shouldRender(mc, vectorsEnabled), "Menus must hide Vectors"); mc.gui.setScreen(null);
                 int swapSlot = (p.getInventory().getSelectedSlot() + 1) % 9;
                 p.getInventory().setItem(swapSlot, new ItemStack(Items.NETHERITE_SWORD));
                 AttributeSwaps.click();

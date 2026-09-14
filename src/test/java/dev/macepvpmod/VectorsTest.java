@@ -51,6 +51,39 @@ class VectorsTest {
 
     private static double distance(VectorsMath.Point point,double x,double y){return Math.hypot(point.x()-x,point.y()-y);}
 
+    @Test void reticleSmoothsSmallChangesForAtMostOneTick() {
+        var smoother=new VelocitySmoother();var player=new Object();var world=new Object();
+        var first=new Vec3(0,0,1);var second=new Vec3(-.2,0,1);
+        smoother.sample(first,false,player,world);smoother.sample(second,false,player,world);
+        assertDirection(first,smoother.value(0,Vec3.ZERO));
+        var halfway=smoother.value(.5f,Vec3.ZERO);
+        assertTrue(halfway.x()<0&&halfway.x()>second.normalize().x);
+        assertDirection(second,smoother.value(1,Vec3.ZERO));
+        assertDirection(second,smoother.value(2,Vec3.ZERO));
+    }
+
+    @Test void reticleSnapsOnSharpMovementAndStateChanges() {
+        var smoother=new VelocitySmoother();var player=new Object();var world=new Object();
+        smoother.sample(new Vec3(0,0,1),false,player,world);
+        var sharp=new Vec3(-1,0,0);smoother.sample(sharp,false,player,world);
+        assertDirection(sharp,smoother.value(0,Vec3.ZERO));
+        var grounded=new Vec3(-.9,0,.1);smoother.sample(grounded,true,player,world);
+        assertDirection(grounded,smoother.value(0,Vec3.ZERO));
+        smoother.sample(Vec3.ZERO,true,player,world);
+        assertEquals(Vec3.ZERO,smoother.value(0,sharp));
+        smoother.sample(grounded,true,new Object(),world);
+        assertDirection(grounded,smoother.value(0,Vec3.ZERO));
+        var dimensionChange=new Vec3(-.8,0,.2);smoother.sample(dimensionChange,true,player,new Object());
+        assertDirection(dimensionChange,smoother.value(0,Vec3.ZERO));
+        smoother.reset();assertEquals(sharp,smoother.value(.5f,sharp));
+    }
+
+    private static void assertDirection(Vec3 expected,Vec3 actual) {
+        assertEquals(expected.normalize().x,actual.normalize().x,1e-9);
+        assertEquals(expected.normalize().y,actual.normalize().y,1e-9);
+        assertEquals(expected.normalize().z,actual.normalize().z,1e-9);
+    }
+
     @Test void templateRequiresOnlyMagnitude() {
         assertEquals("Speed: 12.5 blocks/s",VectorsText.format("Speed: {magnitude} blocks/s",12.45));
         assertEquals("",VectorsText.error("{magnitude} bps"));
@@ -60,7 +93,7 @@ class VectorsTest {
 
     @Test void defaultsClampAndPersist() throws Exception {
         var defaults=VectorsConfig.defaults().validated();
-        assertTrue(defaults.enabled()&&defaults.reticleEnabled()&&defaults.velocityEnabled());
+        assertFalse(defaults.enabled());assertTrue(defaults.reticleEnabled()&&defaults.velocityEnabled());
         assertEquals(0,defaults.velocityColors().minimum());assertEquals(40,defaults.velocityColors().maximum());
         var clamped=new VectorsConfig(2,true,true,true,true,true,null,-4,-1,2,-5,
                 "{magnitude}",defaults.velocityColors()).validated();
@@ -70,16 +103,15 @@ class VectorsTest {
         var loaded=new VectorsConfigStore(path);loaded.load();assertEquals(clamped,loaded.current());
     }
 
-    @Test void equipmentFiltersUseOrLogic() {
+    @Test void activityFiltersUseOrLogic() {
         var both=VectorsConfig.defaults();
-        assertTrue(VectorsHud.equipmentAllowed(both,true,false,false));
-        assertTrue(VectorsHud.equipmentAllowed(both,false,true,false));
-        assertTrue(VectorsHud.equipmentAllowed(both,false,false,true));
-        assertFalse(VectorsHud.equipmentAllowed(both,false,false,false));
+        assertTrue(VectorsHud.activityAllowed(both,true,false));
+        assertTrue(VectorsHud.activityAllowed(both,false,true));
+        assertFalse(VectorsHud.activityAllowed(both,false,false));
         var elytra=new VectorsConfig(2,true,true,true,true,false,both.icon(),both.size(),both.color(),both.opacity(),both.stationaryThreshold(),both.velocityTemplate(),both.velocityColors());
-        assertTrue(VectorsHud.equipmentAllowed(elytra,true,false,false));assertFalse(VectorsHud.equipmentAllowed(elytra,false,true,false));
+        assertTrue(VectorsHud.activityAllowed(elytra,true,false));assertFalse(VectorsHud.activityAllowed(elytra,false,true));
         var unrestricted=new VectorsConfig(2,true,true,true,false,false,both.icon(),both.size(),both.color(),both.opacity(),both.stationaryThreshold(),both.velocityTemplate(),both.velocityColors());
-        assertTrue(VectorsHud.equipmentAllowed(unrestricted,false,false,false));
+        assertTrue(VectorsHud.activityAllowed(unrestricted,false,false));
     }
 
     @Test void schemaOneMigratesAndPreservesValues() throws Exception {

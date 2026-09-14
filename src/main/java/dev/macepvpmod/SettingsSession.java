@@ -118,6 +118,6 @@ final class SettingsSession {
     }
     private SurvivalConfig copySurvival(boolean enabled) { return copySurvival(survival,enabled); }
     private SurvivalConfig copySurvival(SurvivalConfig s,boolean enabled) {
-        return new SurvivalConfig(2,s.retotemEnabled(),s.healingEnabled(),s.retotemText(),s.retotemColor(),s.retotemSize(),s.retotemX(),s.retotemY(),s.healthText(),s.healthColor(),s.saturationText(),s.saturationColor(),s.combinedText(),s.combinedColor(),s.healingSize(),s.healingX(),s.healingY(),s.healthPercent(),s.saturationThreshold(),s.harpVolume(),s.bassVolume(),s.harpPitch(),s.bassPitch(),s.audioStartInterval(),s.audioEndInterval(),s.healingItems(),s.saturationItems(),s.sounds(),enabled);
+        return new SurvivalConfig(2,s.retotemEnabled(),s.healingEnabled(),s.retotemText(),s.retotemColor(),s.retotemSize(),s.retotemX(),s.retotemY(),s.healthText(),s.healthColor(),s.saturationText(),s.saturationColor(),s.combinedText(),s.combinedColor(),s.healingSize(),s.healingX(),s.healingY(),s.healthPercent(),s.saturationThreshold(),s.harpVolume(),s.bassVolume(),s.harpPitch(),s.bassPitch(),s.audioStartInterval(),s.audioEndInterval(),s.healingItems(),s.saturationItems(),s.sounds(),s.damageIndicatorEnabled(),s.damageIndicatorThickness(),s.damageIndicatorOpacity(),s.damageIndicatorColor(),enabled);
     }
 }
