@@ -16,13 +16,13 @@ import org.junit.jupiter.api.Test;
 final class ReachOutlineRulesTest {
     @BeforeAll static void bootstrapMinecraft() { SharedConstants.tryDetectVersion(); Bootstrap.bootStrap(); }
 
-    @Test void onlyOpaqueDryNonreplaceableBlocksAreSupports() {
+    @Test void onlyDryNonreplaceableBlocksArePotentialSupports() {
         assertTrue(ReachOutlines.eligibleSupport(Blocks.STONE.defaultBlockState()));
         assertFalse(ReachOutlines.eligibleSupport(Blocks.AIR.defaultBlockState()));
         assertFalse(ReachOutlines.eligibleSupport(Blocks.WATER.defaultBlockState()));
         assertFalse(ReachOutlines.eligibleSupport(Blocks.LAVA.defaultBlockState()));
-        assertFalse(ReachOutlines.eligibleSupport(Blocks.GLASS.defaultBlockState()));
-        assertFalse(ReachOutlines.eligibleSupport(Blocks.OAK_LEAVES.defaultBlockState()));
+        assertTrue(ReachOutlines.eligibleSupport(Blocks.GLASS.defaultBlockState()));
+        assertTrue(ReachOutlines.eligibleSupport(Blocks.OAK_LEAVES.defaultBlockState()));
     }
 
     @Test void destinationsMustBeReplaceableAndDry() {
@@ -76,6 +76,21 @@ final class ReachOutlineRulesTest {
         float[] opacity={0,.25f,0,.75f,0,0};
         assertEquals(.75f,ReachOutlines.edgeOpacity(opacity,POS_X,POS_Y));
         assertEquals(0x4066ccff,ReachOutlines.scaledColor(0x8066ccff,.5f));
+    }
+
+    @Test void partialShapesOnlyEmitEdgesOnSelectedBoundaryFaces() {
+        float[] top={0,0,0,1,0,0};
+        var bottomSlab=Blocks.STONE_SLAB.defaultBlockState().getShape(null,null);
+        assertTrue(ReachOutlines.shapeEdges(bottomSlab,top).isEmpty());
+        var topSlab=Blocks.STONE_SLAB.defaultBlockState().setValue(net.minecraft.world.level.block.SlabBlock.TYPE,
+                net.minecraft.world.level.block.state.properties.SlabType.TOP).getShape(null,null);
+        assertEquals(4,ReachOutlines.shapeEdges(topSlab,top).size());
+    }
+
+    @Test void sphericalScanRejectsCubeCornersOutsideReach() {
+        Vec3 eye=new Vec3(.5,.5,.5);
+        assertEquals(0,ReachOutlines.distanceSquaredToBox(eye,BlockPos.ZERO));
+        assertTrue(ReachOutlines.distanceSquaredToBox(eye,new BlockPos(4,4,4))>9);
     }
 
     private static void assertTargetsFace(BlockPos pos,Vec3 camera,Direction face) {

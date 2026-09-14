@@ -21,7 +21,7 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 var vectorsEnabled=new VectorsConfig(2,true,vectorDefaults.reticleEnabled(),vectorDefaults.velocityEnabled(),
                         vectorDefaults.elytraOnly(),vectorDefaults.spearOnly(),vectorDefaults.icon(),vectorDefaults.size(),
                         vectorDefaults.color(),vectorDefaults.opacity(),vectorDefaults.stationaryThreshold(),
-                        vectorDefaults.velocityTemplate(),vectorDefaults.velocityColors());
+                        vectorDefaults.velocityThreshold(),vectorDefaults.velocityTemplate(),vectorDefaults.velocityColors());
                 check(VectorsHud.shouldRender(mc, vectorsEnabled), "Enabled Vectors should render during normal play");
                 check(!VectorsHud.activityAllowed(p,vectorsEnabled), "Filtered reticle should require gliding or spear charging");
                 p.startFallFlying();

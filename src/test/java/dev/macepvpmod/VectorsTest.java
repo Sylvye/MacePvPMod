@@ -95,10 +95,11 @@ class VectorsTest {
         var defaults=VectorsConfig.defaults().validated();
         assertFalse(defaults.enabled());assertTrue(defaults.reticleEnabled()&&defaults.velocityEnabled());
         assertEquals(0,defaults.velocityColors().minimum());assertEquals(40,defaults.velocityColors().maximum());
-        var clamped=new VectorsConfig(2,true,true,true,true,true,null,-4,-1,2,-5,
+        assertEquals(0,defaults.velocityThreshold());
+        var clamped=new VectorsConfig(2,true,true,true,true,true,null,-4,-1,2,-5,-2,
                 "{magnitude}",defaults.velocityColors()).validated();
         assertEquals(VectorIcon.CIRCLE,clamped.icon());assertEquals(3,clamped.size());
-        assertEquals(0xffffff,clamped.color());assertEquals(1,clamped.opacity());assertEquals(0,clamped.stationaryThreshold());
+        assertEquals(0xffffff,clamped.color());assertEquals(1,clamped.opacity());assertEquals(0,clamped.stationaryThreshold());assertEquals(0,clamped.velocityThreshold());
         Path path=directory.resolve("vectors.json");var store=new VectorsConfigStore(path);store.save(clamped);
         var loaded=new VectorsConfigStore(path);loaded.load();assertEquals(clamped,loaded.current());
     }
@@ -108,9 +109,9 @@ class VectorsTest {
         assertTrue(VectorsHud.activityAllowed(both,true,false));
         assertTrue(VectorsHud.activityAllowed(both,false,true));
         assertFalse(VectorsHud.activityAllowed(both,false,false));
-        var elytra=new VectorsConfig(2,true,true,true,true,false,both.icon(),both.size(),both.color(),both.opacity(),both.stationaryThreshold(),both.velocityTemplate(),both.velocityColors());
+        var elytra=new VectorsConfig(2,true,true,true,true,false,both.icon(),both.size(),both.color(),both.opacity(),both.stationaryThreshold(),both.velocityThreshold(),both.velocityTemplate(),both.velocityColors());
         assertTrue(VectorsHud.activityAllowed(elytra,true,false));assertFalse(VectorsHud.activityAllowed(elytra,false,true));
-        var unrestricted=new VectorsConfig(2,true,true,true,false,false,both.icon(),both.size(),both.color(),both.opacity(),both.stationaryThreshold(),both.velocityTemplate(),both.velocityColors());
+        var unrestricted=new VectorsConfig(2,true,true,true,false,false,both.icon(),both.size(),both.color(),both.opacity(),both.stationaryThreshold(),both.velocityThreshold(),both.velocityTemplate(),both.velocityColors());
         assertTrue(VectorsHud.activityAllowed(unrestricted,false,false));
     }
 

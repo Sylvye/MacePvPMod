@@ -103,7 +103,7 @@ final class SettingsSession {
         if (page == 3) swap = new AttributeSwapConfig(2,swap.visualEnabled(),swap.soundEnabled(),swap.soundId(),swap.weaponOnly(),swap.successfulHitOnly(),!swap.enabled());
         if (page == 4) survival = copySurvival(!survival.enabled());
         if (page == 5) reach = new ReachOutlineConfig(1,!reach.enabled(),reach.color(),reach.intensity(),reach.thickness(),reach.topFacesOnly(),reach.hardToReachMode(),reach.minimumReachableArea());
-        if (page == 6) vectors = new VectorsConfig(2,!vectors.enabled(),vectors.reticleEnabled(),vectors.velocityEnabled(),vectors.elytraOnly(),vectors.spearOnly(),vectors.icon(),vectors.size(),vectors.color(),vectors.opacity(),vectors.stationaryThreshold(),vectors.velocityTemplate(),vectors.velocityColors());
+        if (page == 6) vectors = new VectorsConfig(2,!vectors.enabled(),vectors.reticleEnabled(),vectors.velocityEnabled(),vectors.elytraOnly(),vectors.spearOnly(),vectors.icon(),vectors.size(),vectors.color(),vectors.opacity(),vectors.stationaryThreshold(),vectors.velocityThreshold(),vectors.velocityTemplate(),vectors.velocityColors());
     }
 
     boolean enabled(int page) { return switch(page) { case 1 -> pitch.enabled(); case 2 -> damage.enabled(); case 3 -> swap.enabled(); case 4 -> survival.enabled(); case 5 -> reach.enabled(); case 6 -> vectors.enabled(); default -> true; }; }

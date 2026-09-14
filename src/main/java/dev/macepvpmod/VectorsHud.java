@@ -40,7 +40,7 @@ public final class VectorsHud {
                     mc.options.fov().get(),g.guiWidth(),g.guiHeight(),c.size());
             drawIcon(g,(int)Math.round(point.x()),(int)Math.round(point.y()),c);
         } else SMOOTHER.reset();
-        if(c.velocityEnabled()) HudRenderer.textColor(g,VectorsText.format(c.velocityTemplate(),magnitude),
+        if(c.velocityEnabled()&&magnitude>c.velocityThreshold()) HudRenderer.textColor(g,VectorsText.format(c.velocityTemplate(),magnitude),
                 MacePvPMod.HUD_CONFIG.current().velocity(),c.velocityColors().color(magnitude));
     }
     private static void drawIcon(GuiGraphicsExtractor g,int cx,int cy,VectorsConfig c) {
