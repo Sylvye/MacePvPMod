@@ -31,7 +31,7 @@ Select a module from the directory. Each module has its own settings page and co
 
 ### HUD Studio
 
-Select an element, then choose **Drag / resize preview**. Drag the text or bar to move it, drag its bottom-right handle to resize it, or use arrow keys to nudge it. The controls page also provides numeric offsets and size, per-element reset, and color pickers with hue, saturation/brightness, presets, and optional hex entry. The pitch bar has width, thickness, and opacity controls.
+Select an element to see a centered appearance sample, then choose **Edit position & size**. The layout editor shows a scaled view of the whole screen with the other elements muted for context. Drag the selected text or bar to move it, drag its bottom-right handle to resize it, use arrow keys to nudge it, or use the synchronized position and size sliders. The pitch bar uses width and thickness controls; color and opacity remain on the Studio page.
 
 Switch between **all elements** and **selected only** previews. Samples remain visible even when the corresponding module is disabled. The healing warning has separate low-health, low-saturation, and combined colors. Preview edits apply only after **Save**; **Cancel** discards them.
 

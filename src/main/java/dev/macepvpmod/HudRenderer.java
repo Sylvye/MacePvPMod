@@ -26,14 +26,23 @@ final class HudRenderer {
         return textColor(g,Component.literal(text),s,color);
     }
     static Bounds textColor(GuiGraphicsExtractor g,Component text,HudStyle s,int color) {
-        var b=textBounds(text,s,g.guiWidth(),g.guiHeight());
+        return textColor(g,text,s,color,g.guiWidth(),g.guiHeight());
+    }
+    static Bounds textColor(GuiGraphicsExtractor g,String text,HudStyle s,int color,int viewportW,int viewportH) {
+        return textColor(g,Component.literal(text),s,color,viewportW,viewportH);
+    }
+    static Bounds textColor(GuiGraphicsExtractor g,Component text,HudStyle s,int color,int viewportW,int viewportH) {
+        var b=textBounds(text,s,viewportW,viewportH);
         float scale=(float)(b.height()/Minecraft.getInstance().font.lineHeight);
         g.pose().pushMatrix();g.pose().translate((float)b.x(),(float)b.y());g.pose().scale(scale,scale);
         g.text(Minecraft.getInstance().font,text,0,0,0xff000000|color);g.pose().popMatrix();return b;
     }
     static Bounds pitch(GuiGraphicsExtractor g,HudStyle s,PitchConfig c,double pitch) {
-        var b=bounds(s,Math.min(s.width(),g.guiWidth()),s.thickness(),g.guiWidth(),g.guiHeight());
-        int top=(int)Math.clamp(b.y()+PitchMath.offset(pitch,c),0,Math.max(0,g.guiHeight()-b.height()));
+        return pitch(g,s,c,pitch,g.guiWidth(),g.guiHeight());
+    }
+    static Bounds pitch(GuiGraphicsExtractor g,HudStyle s,PitchConfig c,double pitch,int viewportW,int viewportH) {
+        var b=bounds(s,Math.min(s.width(),viewportW),s.thickness(),viewportW,viewportH);
+        int top=(int)Math.clamp(b.y()+PitchMath.offset(pitch,c),0,Math.max(0,viewportH-b.height()));
         g.fill((int)b.x(),top,(int)(b.x()+b.width()),top+(int)b.height(),((int)Math.round(s.opacity()*255)<<24)|s.color());
         return new Bounds(b.x(),top,b.width(),b.height());
     }
