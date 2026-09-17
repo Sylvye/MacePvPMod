@@ -12,6 +12,7 @@ final class SettingsSession {
     private final HudConfig originalHud;
     private final ReachOutlineConfig originalReach;
     private final VectorsConfig originalVectors;
+    private final TrackerConfig originalTracker;
     PitchConfig pitch;
     DamageConfig damage;
     AttributeSwapConfig swap;
@@ -19,6 +20,7 @@ final class SettingsSession {
     HudConfig hud;
     ReachOutlineConfig reach;
     VectorsConfig vectors;
+    TrackerConfig tracker;
 
     SettingsSession() {
         originalPitch = pitch = MacePvPMod.CONFIG.current();
@@ -28,17 +30,18 @@ final class SettingsSession {
         originalHud = hud = MacePvPMod.HUD_CONFIG.current();
         originalReach = reach = MacePvPMod.REACH_OUTLINE_CONFIG.current();
         originalVectors = vectors = MacePvPMod.VECTORS_CONFIG.current();
+        originalTracker = tracker = MacePvPMod.TRACKER_CONFIG.current();
     }
 
     boolean dirty() {
         return !pitch.equals(originalPitch) || !damage.equals(originalDamage) || !swap.equals(originalSwap)
                 || !survival.equals(originalSurvival) || !hud.equals(originalHud) || !reach.equals(originalReach)
-                || !vectors.equals(originalVectors);
+                || !vectors.equals(originalVectors) || !tracker.equals(originalTracker);
     }
 
     String validation() {
         try {
-            pitch.validated(); damage.validated(); swap.validated(); survival.validated(); hud.validated(); reach.validated(); vectors.validated();
+            pitch.validated(); damage.validated(); swap.validated(); survival.validated(); hud.validated(); reach.validated(); vectors.validated(); tracker.validated();
             String fall = DamageText.error(damage.fallTemplate(), false);
             if (!fall.isEmpty()) return "Damage Counter: " + fall;
             String hit = DamageText.error(damage.hitTemplate(), true);
@@ -59,6 +62,7 @@ final class SettingsSession {
             MacePvPMod.HUD_CONFIG.save(hud);
             MacePvPMod.REACH_OUTLINE_CONFIG.save(reach);
             MacePvPMod.VECTORS_CONFIG.save(vectors);
+            MacePvPMod.TRACKER_CONFIG.save(tracker);
         } catch (IOException failure) {
             // Restore both disk and live state when any later store fails.
             try { MacePvPMod.CONFIG.save(originalPitch); } catch (IOException ignored) {}
@@ -68,6 +72,7 @@ final class SettingsSession {
             try { MacePvPMod.HUD_CONFIG.save(originalHud); } catch (IOException ignored) {}
             try { MacePvPMod.REACH_OUTLINE_CONFIG.save(originalReach); } catch (IOException ignored) {}
             try { MacePvPMod.VECTORS_CONFIG.save(originalVectors); } catch (IOException ignored) {}
+            try { MacePvPMod.TRACKER_CONFIG.save(originalTracker); } catch (IOException ignored) {}
             throw failure;
         }
     }
@@ -91,10 +96,11 @@ final class SettingsSession {
     void survival(String field,Object value){survival=with(survival,field,value);}
     void reach(String field,Object value){reach=with(reach,field,value);}
     void vectors(String field,Object value){vectors=with(vectors,field,value);}
+    void tracker(String field,Object value){tracker=with(tracker,field,value);}
 
     void resetAll() {
         pitch = PitchConfig.defaults(); damage = DamageConfig.defaults(); swap = AttributeSwapConfig.defaults();
-        survival = SurvivalConfig.defaults(); hud = HudConfig.defaults(); reach = ReachOutlineConfig.defaults(); vectors = VectorsConfig.defaults();
+        survival = SurvivalConfig.defaults(); hud = HudConfig.defaults(); reach = ReachOutlineConfig.defaults(); vectors = VectorsConfig.defaults(); tracker = TrackerConfig.defaults();
     }
 
     void toggle(int page) {
@@ -104,12 +110,13 @@ final class SettingsSession {
         if (page == 4) survival = copySurvival(!survival.enabled());
         if (page == 5) reach = new ReachOutlineConfig(1,!reach.enabled(),reach.color(),reach.intensity(),reach.thickness(),reach.topFacesOnly(),reach.hardToReachMode(),reach.minimumReachableArea());
         if (page == 6) vectors = new VectorsConfig(2,!vectors.enabled(),vectors.reticleEnabled(),vectors.velocityEnabled(),vectors.elytraOnly(),vectors.spearOnly(),vectors.icon(),vectors.size(),vectors.color(),vectors.opacity(),vectors.stationaryThreshold(),vectors.velocityThreshold(),vectors.velocityTemplate(),vectors.velocityColors());
+        if (page == 7) tracker = new TrackerConfig(3,!tracker.enabled(),tracker.radius(),tracker.opacity(),tracker.iconSize(),tracker.onlyWhenPlayerListHeld(),tracker.displayMode(),tracker.hideLocatorBar(),tracker.distanceScalingStrength(),tracker.showDistance(),tracker.hideDistantPlayers(),tracker.hideStartDistance(),tracker.maxVisiblePlayers());
     }
 
-    boolean enabled(int page) { return switch(page) { case 1 -> pitch.enabled(); case 2 -> damage.enabled(); case 3 -> swap.enabled(); case 4 -> survival.enabled(); case 5 -> reach.enabled(); case 6 -> vectors.enabled(); default -> true; }; }
+    boolean enabled(int page) { return switch(page) { case 1 -> pitch.enabled(); case 2 -> damage.enabled(); case 3 -> swap.enabled(); case 4 -> survival.enabled(); case 5 -> reach.enabled(); case 6 -> vectors.enabled(); case 7 -> tracker.enabled(); default -> true; }; }
 
     void reset(int page) {
-        switch (page) { case 1 -> pitch=PitchConfig.defaults(); case 2 -> damage=DamageConfig.defaults(); case 3 -> swap=AttributeSwapConfig.defaults(); case 4 -> survival=SurvivalConfig.defaults(); case 5 -> reach=ReachOutlineConfig.defaults(); case 6 -> vectors=VectorsConfig.defaults(); case 7 -> hud=HudConfig.defaults(); default -> {} }
+        switch (page) { case 1 -> pitch=PitchConfig.defaults(); case 2 -> damage=DamageConfig.defaults(); case 3 -> swap=AttributeSwapConfig.defaults(); case 4 -> survival=SurvivalConfig.defaults(); case 5 -> reach=ReachOutlineConfig.defaults(); case 6 -> vectors=VectorsConfig.defaults(); case 7 -> tracker=TrackerConfig.defaults(); case 8 -> hud=HudConfig.defaults(); default -> {} }
     }
 
     private DamageConfig copyDamage(boolean enabled) { return copyDamage(damage,enabled); }

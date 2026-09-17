@@ -17,6 +17,12 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 var p = mc.player;
                 var defaults = PitchConfig.defaults();
                 var vectorDefaults = VectorsConfig.defaults();
+                var trackerDefaults = TrackerConfig.defaults();
+                check(!PlayerTrackerHud.shouldRender(mc,trackerDefaults), "Tracker should require the List Players key by default");
+                var trackerVisible=new TrackerConfig(3,true,trackerDefaults.radius(),trackerDefaults.opacity(),trackerDefaults.iconSize(),false,trackerDefaults.displayMode(),false,trackerDefaults.distanceScalingStrength(),trackerDefaults.showDistance(),trackerDefaults.hideDistantPlayers(),trackerDefaults.hideStartDistance(),trackerDefaults.maxVisiblePlayers());
+                check(PlayerTrackerHud.shouldRender(mc,trackerVisible), "Tracker should render during normal play when the key restriction is off");
+                mc.gui.hud.toggle();check(!PlayerTrackerHud.shouldRender(mc,trackerVisible), "F1 must hide tracker");mc.gui.hud.toggle();
+                mc.gui.setScreen(new SettingsScreen(null));check(!PlayerTrackerHud.shouldRender(mc,trackerVisible), "Menus must hide tracker");mc.gui.setScreen(null);
                 check(!VectorsHud.shouldRender(mc, vectorDefaults), "Vectors should be disabled by default");
                 var vectorsEnabled=new VectorsConfig(2,true,vectorDefaults.reticleEnabled(),vectorDefaults.velocityEnabled(),
                         vectorDefaults.elytraOnly(),vectorDefaults.spearOnly(),vectorDefaults.icon(),vectorDefaults.size(),

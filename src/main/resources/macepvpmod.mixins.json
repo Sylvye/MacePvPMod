@@ -6,7 +6,8 @@
     "DamageEventMixin",
     "SpearJabMixin",
     "AttributeSwapMouseMixin",
-    "AttributeSwapInventoryMixin"
+    "AttributeSwapInventoryMixin",
+    "LocatorBarMixin"
   ],
   "injectors": {
     "defaultRequire": 1
