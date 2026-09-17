@@ -9,6 +9,7 @@ import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.waypoints.TrackedWaypoint;
+import net.minecraft.world.phys.Vec3;
 
 public final class PlayerTrackerHud {
     private record Target(TrackedWaypoint waypoint,UUID id,PlayerInfo info,double distance){}
@@ -44,9 +45,10 @@ public final class PlayerTrackerHud {
             if(config.displayMode()==TrackerDisplayMode.HEADS)drawHead(graphics,info,x,y,iconSize,alpha);
             else drawCircle(graphics,x+iconSize/2,y+iconSize/2,iconSize,ARGB.color(alpha,waypointColor(waypoint,id)));
             var trackedPlayer=level.getPlayerByUUID(id);var fallback=waypoint.pitchDirectionToCamera(level,mc.gameRenderer,partial);
-            var direction=trackedPlayer==null?fallback:verticalDirection(trackedPlayer.getEyeY()-camera.getEyeY(),fallback);
+            var mainCamera=mc.gameRenderer.mainCamera();
+            var direction=trackedPlayer==null?fallback:lookDirection(mainCamera.position(),mainCamera.xRot(),trackedPlayer.getEyePosition(partial.apply(trackedPlayer)),fallback);
             drawVerticalBadge(graphics,x,y,iconSize,direction,alpha);
-            if(config.showDistance()&&Double.isFinite(distance))drawDistance(graphics,x,y,iconSize,point.y()<cy,TrackerMath.distanceLabel(distance),alpha);
+            if(config.showDistance()&&Double.isFinite(distance))drawDistance(graphics,x,y,iconSize,point.y()<cy,direction,TrackerMath.distanceLabel(distance),alpha);
         }
     }
     private static void drawHead(GuiGraphicsExtractor graphics,PlayerInfo info,int x,int y,int size,int alpha){
@@ -59,16 +61,21 @@ public final class PlayerTrackerHud {
         double radius=size/2.0;int r=(int)Math.ceil(radius);for(int y=-r;y<=r;y++)for(int x=-r;x<=r;x++)if(x*x+y*y<=radius*radius)graphics.fill(cx+x,cy+y,cx+x+1,cy+y+1,color);
     }
     private static void drawVerticalBadge(GuiGraphicsExtractor graphics,int x,int y,int size,TrackedWaypoint.PitchDirection direction,int alpha){
-        if(direction==TrackedWaypoint.PitchDirection.NONE)return;int color=ARGB.color(alpha,0xffffff),cx=x+size-1,top=direction==TrackedWaypoint.PitchDirection.UP?y-4:y+size+1;
-        if(direction==TrackedWaypoint.PitchDirection.UP){for(int row=0;row<3;row++)graphics.fill(cx-row,top+row,cx+row+1,top+row+1,color);}
-        else{for(int row=0;row<3;row++)graphics.fill(cx-(2-row),top+row,cx+(2-row)+1,top+row+1,color);}
+        if(direction==TrackedWaypoint.PitchDirection.NONE)return;int color=ARGB.color(alpha,0xffffff),width=arrowWidth(size),height=arrowHeight(size),half=width/2,cx=x+size/2;
+        int top=direction==TrackedWaypoint.PitchDirection.UP?y-height-2:y+size+2;
+        for(int row=0;row<height;row++){int extent=direction==TrackedWaypoint.PitchDirection.UP?(int)Math.round(half*row/(double)(height-1)):(int)Math.round(half*(height-1-row)/(double)(height-1));graphics.fill(cx-extent,top+row,cx+extent+1,top+row+1,color);}
     }
-    static TrackedWaypoint.PitchDirection verticalDirection(double yDifference,TrackedWaypoint.PitchDirection fallback){
-        if(yDifference>2)return TrackedWaypoint.PitchDirection.UP;if(yDifference< -2)return TrackedWaypoint.PitchDirection.DOWN;return fallback;
+    private static int arrowWidth(int iconSize){return Math.max(7,(iconSize*3/4)|1);}
+    private static int arrowHeight(int iconSize){return arrowWidth(iconSize)/2+1;}
+    static TrackedWaypoint.PitchDirection lookDirection(Vec3 cameraPosition,float cameraPitch,Vec3 targetPosition,TrackedWaypoint.PitchDirection fallback){
+        Vec3 offset=targetPosition.subtract(cameraPosition);double horizontal=Math.hypot(offset.x,offset.z);if(horizontal<1e-6&&Math.abs(offset.y)<1e-6)return fallback;
+        double targetPitch=Math.toDegrees(Math.atan2(-offset.y,horizontal)),difference=targetPitch-cameraPitch;
+        if(difference>2)return TrackedWaypoint.PitchDirection.DOWN;if(difference< -2)return TrackedWaypoint.PitchDirection.UP;return TrackedWaypoint.PitchDirection.NONE;
     }
-    private static void drawDistance(GuiGraphicsExtractor graphics,int markerX,int markerY,int markerSize,boolean aboveCursor,String label,int alpha){
+    private static void drawDistance(GuiGraphicsExtractor graphics,int markerX,int markerY,int markerSize,boolean aboveCursor,TrackedWaypoint.PitchDirection direction,String label,int alpha){
         var font=Minecraft.getInstance().font;int x=markerX+(markerSize-font.width(label))/2;
-        int y=aboveCursor?markerY-font.lineHeight-3:markerY+markerSize+3;
+        int arrowSpace=(aboveCursor&&direction==TrackedWaypoint.PitchDirection.UP)||(!aboveCursor&&direction==TrackedWaypoint.PitchDirection.DOWN)?arrowHeight(markerSize)+4:0;
+        int y=aboveCursor?markerY-font.lineHeight-3-arrowSpace:markerY+markerSize+3+arrowSpace;
         graphics.text(font,label,x,y,ARGB.color(alpha,0xffffff),true);
     }
 }

@@ -74,10 +74,13 @@ class TrackerTest {
         assertEquals(0,TrackerMath.firstVisibleIndex(12,0));assertEquals(0,TrackerMath.firstVisibleIndex(3,5));assertEquals(7,TrackerMath.firstVisibleIndex(12,5));
     }
 
-    @Test void loadedPlayerHeightOverridesMisleadingProjectedDirection() {
-        assertEquals(TrackedWaypoint.PitchDirection.UP,PlayerTrackerHud.verticalDirection(20,TrackedWaypoint.PitchDirection.DOWN));
-        assertEquals(TrackedWaypoint.PitchDirection.DOWN,PlayerTrackerHud.verticalDirection(-20,TrackedWaypoint.PitchDirection.UP));
-        assertEquals(TrackedWaypoint.PitchDirection.NONE,PlayerTrackerHud.verticalDirection(1,TrackedWaypoint.PitchDirection.NONE));
+    @Test void lookDirectionUsesRequiredPitchInsteadOfRawHeight() {
+        var camera=new net.minecraft.world.phys.Vec3(0,64,0);
+        assertEquals(TrackedWaypoint.PitchDirection.UP,PlayerTrackerHud.lookDirection(camera,0,new net.minecraft.world.phys.Vec3(0,84,20),TrackedWaypoint.PitchDirection.DOWN));
+        assertEquals(TrackedWaypoint.PitchDirection.DOWN,PlayerTrackerHud.lookDirection(camera,0,new net.minecraft.world.phys.Vec3(0,44,20),TrackedWaypoint.PitchDirection.UP));
+        assertEquals(TrackedWaypoint.PitchDirection.DOWN,PlayerTrackerHud.lookDirection(camera,-45,new net.minecraft.world.phys.Vec3(0,70,100),TrackedWaypoint.PitchDirection.UP));
+        assertEquals(TrackedWaypoint.PitchDirection.UP,PlayerTrackerHud.lookDirection(camera,45,new net.minecraft.world.phys.Vec3(0,58,100),TrackedWaypoint.PitchDirection.DOWN));
+        assertEquals(TrackedWaypoint.PitchDirection.NONE,PlayerTrackerHud.lookDirection(camera,0,new net.minecraft.world.phys.Vec3(0,65,100),TrackedWaypoint.PitchDirection.DOWN));
     }
 
     @Test void waypointFilterAcceptsOnlyKnownOtherPlayerUuids() {
