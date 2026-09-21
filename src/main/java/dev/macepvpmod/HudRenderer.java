@@ -22,6 +22,10 @@ final class HudRenderer {
         int color=state==2?s.secondaryColor():state==3?s.combinedColor():s.color();
         return textColor(g,text,s,color);
     }
+    static Bounds text(GuiGraphicsExtractor g,String text,HudStyle s,int state,double opacityMultiplier) {
+        int color=state==2?s.secondaryColor():state==3?s.combinedColor():s.color();
+        return textColor(g,Component.literal(text),s,color,g.guiWidth(),g.guiHeight(),opacityMultiplier);
+    }
     static Bounds textColor(GuiGraphicsExtractor g,String text,HudStyle s,int color) {
         return textColor(g,Component.literal(text),s,color);
     }
@@ -32,10 +36,14 @@ final class HudRenderer {
         return textColor(g,Component.literal(text),s,color,viewportW,viewportH);
     }
     static Bounds textColor(GuiGraphicsExtractor g,Component text,HudStyle s,int color,int viewportW,int viewportH) {
+        return textColor(g,text,s,color,viewportW,viewportH,1);
+    }
+    private static Bounds textColor(GuiGraphicsExtractor g,Component text,HudStyle s,int color,int viewportW,int viewportH,double opacityMultiplier) {
         var b=textBounds(text,s,viewportW,viewportH);
         float scale=(float)(b.height()/Minecraft.getInstance().font.lineHeight);
         g.pose().pushMatrix();g.pose().translate((float)b.x(),(float)b.y());g.pose().scale(scale,scale);
-        g.text(Minecraft.getInstance().font,text,0,0,0xff000000|color);g.pose().popMatrix();return b;
+        int alpha=(int)Math.round(s.opacity()*Math.clamp(opacityMultiplier,0,1)*255);
+        g.text(Minecraft.getInstance().font,text,0,0,(alpha<<24)|(color&0xffffff));g.pose().popMatrix();return b;
     }
     static Bounds pitch(GuiGraphicsExtractor g,HudStyle s,PitchConfig c,double pitch) {
         return pitch(g,s,c,pitch,g.guiWidth(),g.guiHeight());

@@ -25,6 +25,16 @@ class DamageConfigStoreTest {
         assertTrue(store.current().maceEnabled()); assertTrue(store.current().spearEnabled());
         assertFalse(store.current().swordAxeEnabled()); assertFalse(store.current().useEnemyGear());
         assertTrue(store.current().boldCriticalDamage());
+        assertTrue(store.current().trackerEnabled());assertEquals(60,store.current().trackerSeconds());
+        assertEquals("{player}: {damage} total damage",store.current().trackerTemplate());
+        assertEquals(5,store.current().trackerHudSeconds());assertFalse(store.current().trackerHudAlwaysVisible());
+    }
+
+    @Test void trackerSettingsPersistAndClamp() throws Exception {
+        var file=directory.resolve("tracker-damage.json");var d=DamageConfig.defaults();
+        var changed=new DamageConfig(2,d.fallEnabled(),d.fallColor(),d.fallSize(),d.fallX(),d.fallY(),d.hitEnabled(),d.hitColor(),d.hitSize(),d.hitX(),d.hitY(),d.hitSeconds(),d.calculatedDamage(),d.fallTemplate(),d.hitTemplate(),d.fallThreshold(),d.fallColors(),d.hitColors(),d.maceEnabled(),d.spearEnabled(),d.swordAxeEnabled(),d.useEnemyGear(),d.boldCriticalDamage(),d.enabled(),false,999,"Total {damage} for {player}",999,true);
+        var store=new DamageConfigStore(file);store.save(changed);var loaded=new DamageConfigStore(file);loaded.load();
+        assertFalse(loaded.current().trackerEnabled());assertEquals(300,loaded.current().trackerSeconds());assertEquals("Total {damage} for {player}",loaded.current().trackerTemplate());assertEquals(300,loaded.current().trackerHudSeconds());assertTrue(loaded.current().trackerHudAlwaysVisible());
     }
 
     @Test void weaponAndGearTogglesRoundTrip() throws Exception {

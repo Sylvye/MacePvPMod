@@ -46,6 +46,8 @@ final class SettingsSession {
             if (!fall.isEmpty()) return "Damage Counter: " + fall;
             String hit = DamageText.error(damage.hitTemplate(), true);
             if (!hit.isEmpty()) return "Damage Counter: " + hit;
+            String trackerText=CumulativeDamageText.error(damage.trackerTemplate());
+            if(!trackerText.isEmpty())return "Damage Tracker: "+trackerText;
             if (survival.audioEndInterval() > survival.audioStartInterval()) return "Survival Instincts: critical gap exceeds threshold gap.";
             return "";
         } catch (IllegalArgumentException error) { return error.getMessage(); }
@@ -121,7 +123,7 @@ final class SettingsSession {
 
     private DamageConfig copyDamage(boolean enabled) { return copyDamage(damage,enabled); }
     private DamageConfig copyDamage(DamageConfig d,boolean enabled) {
-        return new DamageConfig(2,d.fallEnabled(),d.fallColor(),d.fallSize(),d.fallX(),d.fallY(),d.hitEnabled(),d.hitColor(),d.hitSize(),d.hitX(),d.hitY(),d.hitSeconds(),d.calculatedDamage(),d.fallTemplate(),d.hitTemplate(),d.fallThreshold(),d.fallColors(),d.hitColors(),d.maceEnabled(),d.spearEnabled(),d.swordAxeEnabled(),d.useEnemyGear(),d.boldCriticalDamage(),enabled);
+        return new DamageConfig(2,d.fallEnabled(),d.fallColor(),d.fallSize(),d.fallX(),d.fallY(),d.hitEnabled(),d.hitColor(),d.hitSize(),d.hitX(),d.hitY(),d.hitSeconds(),d.calculatedDamage(),d.fallTemplate(),d.hitTemplate(),d.fallThreshold(),d.fallColors(),d.hitColors(),d.maceEnabled(),d.spearEnabled(),d.swordAxeEnabled(),d.useEnemyGear(),d.boldCriticalDamage(),enabled,d.trackerEnabled(),d.trackerSeconds(),d.trackerTemplate(),d.trackerHudSeconds(),d.trackerHudAlwaysVisible());
     }
     private SurvivalConfig copySurvival(boolean enabled) { return copySurvival(survival,enabled); }
     private SurvivalConfig copySurvival(SurvivalConfig s,boolean enabled) {

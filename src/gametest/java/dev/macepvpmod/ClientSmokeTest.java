@@ -17,6 +17,9 @@ public final class ClientSmokeTest implements FabricClientGameTest {
             check(screen.mouseClicked(press,false),"Unified HUD drag target missed");var drag=new net.minecraft.client.input.MouseButtonEvent(press.x()+24,press.y()+12,info);check(screen.mouseDragged(drag,24,12),"Unified HUD did not drag");screen.mouseReleased(drag);
             check(!screen.currentStyle().equals(saved),"Unified HUD draft did not move");check(MacePvPMod.HUD_CONFIG.current().fall().equals(saved),"Unified HUD drag leaked before Apply");
         });click(context,"Back to HUD Studio");click(context,"Apply");context.runOnClient(mc->check(!MacePvPMod.HUD_CONFIG.current().fall().equals(HudConfig.defaults().fall()),"Unified HUD drag was not applied"));
+        context.setScreen(()->new SettingsScreen(null));click(context,"HUD Studio");click(context,"Damage total");click(context,"Edit position & size");context.waitTick();
+        context.runOnClient(mc->{var screen=(HudPlacementScreen)mc.gui.screen();check(screen.currentBounds()!=null,"Damage total HUD canvas did not render");});
+        click(context,"Back to HUD Studio");click(context,"Cancel");
         context.runOnClient(mc->{try{MacePvPMod.HUD_CONFIG.save(HudConfig.defaults());}catch(Exception e){throw new RuntimeException(e);}});
         context.setScreen(()->new PitchSettingsScreen(null));click(context,"Enabled: On");context.runOnClient(mc->check(MacePvPMod.CONFIG.current().enabled(),"Draft leaked"));click(context,"Cancel");
         context.setScreen(()->new PitchSettingsScreen(null));click(context,"Advanced settings");click(context,"Third person: Off");click(context,"Save");context.runOnClient(mc->check(MacePvPMod.CONFIG.current().thirdPerson(),"Behavior save failed"));

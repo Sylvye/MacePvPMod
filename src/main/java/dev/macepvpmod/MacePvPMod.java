@@ -8,7 +8,10 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
 
 public final class MacePvPMod implements ClientModInitializer {
     public static final ConfigStore CONFIG = new ConfigStore(FabricLoader.getInstance().getConfigDir().resolve("macepvpmod.json"));
@@ -31,6 +34,12 @@ public final class MacePvPMod implements ClientModInitializer {
         VECTORS_CONFIG.load();
         TRACKER_CONFIG.load();
         ReachOutlines.register();
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher,access)->dispatcher.register(literal("resetdamagetracker").executes(context->{
+            DamageHud.resetTracker();
+            var player=Minecraft.getInstance().player;
+            if(player!=null)player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Damage tracker reset."));
+            return 1;
+        })));
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,
                 Identifier.fromNamespaceAndPath("macepvpmod", "attribute_swap"), AttributeSwaps::extract);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR,

@@ -51,6 +51,13 @@ class SettingsUpgradeTest {
         var json=com.google.gson.JsonParser.parseString(Files.readString(path)).getAsJsonObject();json.remove("velocity");Files.writeString(path,json.toString());
         store.load();assertEquals(custom.hit(),store.current().hit());assertEquals(HudConfig.velocityDefault(),store.current().velocity());
     }
+    @Test void existingHudFilesGainDamageTrackerWithoutChangingOtherElements() throws Exception {
+        var path=directory.resolve("hud-damage-tracker.json");var store=new HudConfigStore(path);
+        var custom=HudConfig.defaults().with(2,HudConfig.defaults().hit().edit(22,33,1.5,0x123456,0,0,100,1,1));store.save(custom);
+        var json=com.google.gson.JsonParser.parseString(Files.readString(path)).getAsJsonObject();json.remove("damageTracker");Files.writeString(path,json.toString());
+        store.load();assertEquals(custom.hit(),store.current().hit());assertEquals(HudConfig.damageTrackerDefault(),store.current().damageTracker());
+        var edited=store.current().with(7,store.current().damageTracker().edit(10,20,2,0xffaa00,0,0,100,1,.5));store.save(edited);store.load();assertEquals(edited,store.current());
+    }
     @Test void invalidStylesClampWithoutNonfiniteValues() {
         var s=new HudStyle(Double.NaN,2,-1,0,Double.POSITIVE_INFINITY,-9000,20,-1,0,0,900,0,0).validated();
         assertEquals(.5,s.anchorX());assertEquals(1,s.anchorY());assertEquals(0,s.x());assertEquals(-4000,s.y());assertEquals(4,s.scale());assertEquals(400,s.width());assertEquals(1,s.thickness());assertEquals(.05,s.opacity());

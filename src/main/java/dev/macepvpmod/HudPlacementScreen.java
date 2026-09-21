@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 
 /** Scaled full-screen HUD canvas sharing the parent workspace's unsaved draft. */
 final class HudPlacementScreen extends Screen {
-    private static final String[] NAMES={"Pitch bar","Fall distance","Hit damage","Retotem","Healing","Attribute swap","Velocity"};
+    private static final String[] NAMES={"Pitch bar","Fall distance","Hit damage","Retotem","Healing","Attribute swap","Velocity","Damage total"};
     private final SettingsScreen parent;private final SettingsSession draft;private final int selected;
     private int panelW,canvasX,canvasY,canvasW,canvasH;private double zoom,originX,originY;
     private HudRenderer.Bounds selectedBounds;private boolean dragging,resizing;
@@ -45,7 +45,7 @@ final class HudPlacementScreen extends Screen {
         g.text(font,"HUD POSITION & SIZE",12,16,0xffffffff);g.text(font,NAMES[selected],canvasX,16,0xff62d8ff);
         g.fill(canvasX,canvasY,canvasX+canvasW,canvasY+canvasH,0xff080d12);
         g.pose().pushMatrix();g.pose().translate((float)originX,(float)originY);g.pose().scale((float)zoom,(float)zoom);
-        selectedBounds=null;for(int i=0;i<7;i++)if(i!=selected)HudPreview.render(g,draft,i,draft.hud.get(i),width,height,true);
+        selectedBounds=null;for(int i=0;i<NAMES.length;i++)if(i!=selected)HudPreview.render(g,draft,i,draft.hud.get(i),width,height,true);
         selectedBounds=HudPreview.render(g,draft,selected,draft.hud.get(selected),width,height,false);
         if(selectedBounds!=null){var b=selectedBounds;int x=(int)b.x()-2,y=(int)b.y()-2,r=(int)(b.x()+b.width())+2,bot=(int)(b.y()+b.height())+2;g.fill(x,y,r,y+1,0xff62d8ff);g.fill(x,bot,r,bot+1,0xff62d8ff);g.fill(x,y,x+1,bot,0xff62d8ff);g.fill(r,y,r+1,bot,0xff62d8ff);g.fill(r-4,bot-4,r+5,bot+5,0xffffffff);}
         g.pose().popMatrix();
