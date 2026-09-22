@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "id": "macepvpmod",
+  "id": "sylvyespvphud",
   "version": "${version}",
-  "name": "MacePvPMod",
-  "description": "A client-only configurable HUD and combat-awareness toolkit for elytra mace PvP and survival. Created by Sylvye. Source: https://github.com/Sylvye/MacePvPMod",
-  "icon": "assets/macepvpmod/icon.png",
+  "name": "SylvyesPvPHud",
+  "description": "A client-only configurable HUD and combat-awareness toolkit for elytra mace PvP and survival. Created by Sylvye. Source: https://github.com/Sylvye/SylvyesPvPHud",
+  "icon": "assets/sylvyespvphud/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
-      "dev.macepvpmod.MacePvPMod"
+      "dev.sylvyespvphud.SylvyesPvPHud"
     ],
     "modmenu": [
-      "dev.macepvpmod.ModMenuIntegration"
+      "dev.sylvyespvphud.ModMenuIntegration"
     ]
   },
   "depends": {
@@ -24,6 +24,6 @@
     "modmenu": ">=20.0.0"
   },
   "mixins": [
-    "macepvpmod.mixins.json"
+    "sylvyespvphud.mixins.json"
   ]
 }

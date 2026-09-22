@@ -1,7 +1,7 @@
 # Verification — September 3, 2026
 
 - `./gradlew build`: passed; 9 unit tests, zero failures or errors.
-- `./gradlew runClient`: Minecraft 26.2 reached the title screen with MacePvPMod and Mod Menu 20.0.1 loaded.
+- `./gradlew runClient`: Minecraft 26.2 reached the title screen with SylvyesPvPHud and Mod Menu 20.0.1 loaded.
 - `./gradlew runClientGameTest`: both client game tests passed with Mod Menu installed.
 - `./gradlew runClientGameTest -PwithoutModMenu`: both client game tests passed without Mod Menu loaded.
 - Rendered and visually inspected basic settings, advanced settings, and the 40° gliding bar. The guide aligns with the crosshair and stays beneath it.

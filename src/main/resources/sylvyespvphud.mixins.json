@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "dev.sylvyespvphud.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "DamageEventMixin",
+    "SpearJabMixin",
+    "AttributeSwapMouseMixin",
+    "AttributeSwapInventoryMixin",
+    "LocatorBarMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

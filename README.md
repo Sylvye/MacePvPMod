@@ -1,6 +1,6 @@
-# MacePvPMod
+# SylvyesPvPHud
 
-MacePvPMod is a client-only Fabric HUD and quality-of-life mod for Minecraft **26.2**, designed for mace PvP, elytra combat, and survival awareness. It provides configurable visual and audio feedback without changing gameplay mechanics, flight, server-side damage, targeting, or network packets.
+SylvyesPvPHud is a client-only Fabric HUD and quality-of-life mod for Minecraft **26.2**, designed for mace PvP, elytra combat, and survival awareness. It provides configurable visual and audio feedback without changing gameplay mechanics, flight, server-side damage, targeting, or network packets.
 
 The mod includes six modules plus the shared HUD Studio workspace:
 
@@ -13,19 +13,19 @@ The mod includes six modules plus the shared HUD Studio workspace:
 
 **HUD Studio** is the shared editor for overlay placement, size, colors, and previews.
 
-Created by **Sylvye**. Source code: [github.com/Sylvye/MacePvPMod](https://github.com/Sylvye/MacePvPMod).
+Created by **Sylvye**. Source code: [github.com/Sylvye/SylvyesPvPHud](https://github.com/Sylvye/SylvyesPvPHud).
 
 ## Install
 
 1. Install Minecraft 26.2 with Fabric Loader 0.19.3 or newer and Java 25.
-2. Put `macepvpmod-1.0.0.jar` and **Fabric API 0.158.0+26.2** in your instance's `mods` folder.
+2. Put `sylvyespvphud-1.0.0.jar` and **Fabric API 0.158.0+26.2** in your instance's `mods` folder.
 3. Optionally install **Mod Menu 20.0.1** for the configuration button.
 
 The mod is client-only
 
 ## Settings
 
-Open **Mods → MacePvPMod → Configure**, or assign **Open MacePvPMod settings** under **Options → Controls → Key Binds → MacePvPMod**. The shortcut starts unbound.
+Open **Mods → SylvyesPvPHud → Configure**, or assign **Open SylvyesPvPHud settings** under **Options → Controls → Key Binds → SylvyesPvPHud**. The shortcut starts unbound.
 
 Select a module from the directory. Each module has its own settings page and configuration file; HUD Studio edits the shared overlay styles.
 
@@ -35,7 +35,7 @@ Select an element to see a centered appearance sample, then choose **Edit positi
 
 Switch between **all elements** and **selected only** previews. Samples remain visible even when the corresponding module is disabled. The healing warning has separate low-health, low-saturation, and combined colors. Preview edits apply only after **Save**; **Cancel** discards them.
 
-HUD appearance is stored in `config/macepvpmod-hud.json`. Until this file exists, legacy module appearance settings are imported automatically. Existing module files remain intact. Saved HUD appearance takes precedence over their old appearance fields.
+HUD appearance is stored in `config/sylvyespvphud-hud.json`. Until this file exists, legacy module appearance settings are imported automatically. Existing module files remain intact. Saved HUD appearance takes precedence over their old appearance fields.
 
 ### Elytra Pitch Bar
 
@@ -45,7 +45,7 @@ HUD appearance is stored in `config/macepvpmod-hud.json`. Until this file exists
 
 Defaults: 100 GUI-pixel width, 1-pixel thickness, `999999` grey, 40% opacity, +40° target, 2 GUI pixels per degree, ±60 GUI pixels of travel.
 
-Settings are stored in `config/macepvpmod.json` in the game instance. Changes made externally load at startup. Missing fields use defaults; numeric values are bounded. Invalid configuration is copied to a uniquely named `macepvpmod-invalid-*.json` backup and defaults are used. Saving replaces the file atomically; errors leave active settings intact and keep the settings screen open.
+Settings are stored in `config/sylvyespvphud.json` in the game instance. Changes made externally load at startup. Missing fields use defaults; numeric values are bounded. Invalid configuration is copied to a uniquely named `sylvyespvphud-invalid-*.json` backup and defaults are used. Saving replaces the file atomically; errors leave active settings intact and keep the settings screen open.
 
 ### Damage Counter
 
@@ -55,7 +55,7 @@ Settings are stored in `config/macepvpmod.json` in the game instance. Changes ma
 - Fall defaults to `{blocks} blocks`; hit defaults to `{damage} damage`. Hit messages also support `{blocks}` for the same Minecraft fall distance captured at attack time. Values use one decimal place. For example, `{damage} damage from {blocks} blocks` becomes `18.0 damage from 12.5 blocks`.
 - A non-gliding mace smash is identified at attack time when fall distance is strictly above 1.5 blocks. After the matching server damage event confirms it, the local fall-distance accumulator is reset. The hit message still uses the attack-time snapshot, so the reset does not change its `{blocks}` value. Spear, sword, axe, and elytra-gliding attacks do not trigger this reset.
 - Variable insertion buttons, explanations, and live examples appear beside the fields. Blank messages and unsupported variables block saving. Each new hit replaces the previous hit message.
-- **Save** applies changes; **Cancel** or Escape discards them. Damage settings persist separately in `config/macepvpmod-damage.json`.
+- **Save** applies changes; **Cancel** or Escape discards them. Damage settings persist separately in `config/sylvyespvphud-damage.json`.
 
 **Reported** uses server health updates. A confirmed hit without a measurable health decrease displays **Damage unavailable**. Absorption damage is not included; overlapping damage from other sources may affect observed health loss.
 
@@ -87,7 +87,7 @@ The Vectors module is disabled by default. Reticle settings are **Icon** (`Circl
 
 The displayed magnitude is the length of the effective client movement vector multiplied by 20, in blocks/second. While grounded, vertical movement is ignored; while airborne, vertical movement contributes to both the magnitude and direction. The default velocity color scale is a gradient over 0–40 blocks/second: `#55FF88` at the low end, `#FFFF55` at the midpoint, and `#FF5555` at the high end. The color editor supports Flat or Gradient mode, a flat color, domain minimum/maximum, and ordered gradient keys with editable colors and intermediate positions.
 
-Vectors is hidden while no world/player is loaded, a menu is open, the HUD is hidden (F1), the player is dead, or the player is spectating. Settings are stored in `config/macepvpmod-vectors.json`. Version 1 files migrate to version 2 by retaining supported values, enabling both activity filters, and removing the old radius field; invalid files fall back to defaults and are backed up.
+Vectors is hidden while no world/player is loaded, a menu is open, the HUD is hidden (F1), the player is dead, or the player is spectating. Settings are stored in `config/sylvyespvphud-vectors.json`. Version 1 files migrate to version 2 by retaining supported values, enabling both activity filters, and removing the old radius field; invalid files fall back to defaults and are backed up.
 
 ### Attribute Swaps
 
@@ -101,7 +101,7 @@ Detects an attribute-changing hotbar swap during combat and optionally shows an 
 - Low health increases volume and shortens the gap between beats. Existing harp/bass settings migrate into two playlist entries with their original volume and pitch.
 - Text, thresholds, and timing remain here; colors, size, and placement live in **HUD**. Playlist **Done** returns a draft; save Survival instincts to apply it.
 
-These alerts are hidden while viewing menus, spectating, dead, paused, or hiding the HUD. Configurations are stored in `config/macepvpmod-attribute-swaps.json` and `config/macepvpmod-survival.json`.
+These alerts are hidden while viewing menus, spectating, dead, paused, or hiding the HUD. Configurations are stored in `config/sylvyespvphud-attribute-swaps.json` and `config/sylvyespvphud-survival.json`.
 
 ## Build and test
 
@@ -120,4 +120,4 @@ Pinned toolchain: Minecraft 26.2, Fabric Loader 0.19.3, Fabric API 0.158.0+26.2,
 
 ## Code structure
 
-`dev.macepvpmod` contains the client entrypoint, independent pitch math and immutable settings, configuration persistence, HUD renderer, native settings screen, and optional Mod Menu integration. The mod identifier and asset namespace are `macepvpmod`; the displayed name is **MacePvPMod**. Future informational features can have separate renderers and settings sections.
+`dev.sylvyespvphud` contains the client entrypoint, independent pitch math and immutable settings, configuration persistence, HUD renderer, native settings screen, and optional Mod Menu integration. The mod identifier and asset namespace are `sylvyespvphud`; the displayed name is **SylvyesPvPHud**. Future informational features can have separate renderers and settings sections.

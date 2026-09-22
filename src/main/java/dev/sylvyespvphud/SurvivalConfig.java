@@ -1,0 +1,53 @@
+package dev.sylvyespvphud;
+
+public record SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean healingEnabled,
+        String retotemText, int retotemColor, double retotemSize, double retotemX, double retotemY,
+        String healthText, int healthColor, String saturationText, int saturationColor,
+        String combinedText, int combinedColor, double healingSize, double healingX, double healingY,
+        double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval, java.util.List<SurvivalItemRule> healingItems, java.util.List<SurvivalItemRule> saturationItems, java.util.List<SoundEntry> sounds,
+        boolean damageIndicatorEnabled, int damageIndicatorThickness, double damageIndicatorOpacity, int damageIndicatorColor, boolean enabled) {
+    public SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean healingEnabled,
+        String retotemText, int retotemColor, double retotemSize, double retotemX, double retotemY,
+        String healthText, int healthColor, String saturationText, int saturationColor,
+        String combinedText, int combinedColor, double healingSize, double healingX, double healingY,
+        double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval, java.util.List<SurvivalItemRule> healingItems, java.util.List<SurvivalItemRule> saturationItems, java.util.List<SoundEntry> sounds) {
+        this(2,retotemEnabled,healingEnabled,retotemText,retotemColor,retotemSize,retotemX,retotemY,healthText,healthColor,saturationText,saturationColor,combinedText,combinedColor,healingSize,healingX,healingY,healthPercent,saturationThreshold,harpVolume,bassVolume,harpPitch,bassPitch,audioStartInterval,audioEndInterval,healingItems,saturationItems,sounds,true,12,.22,0xff2020,true);
+    }
+    public SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean healingEnabled,
+        String retotemText, int retotemColor, double retotemSize, double retotemX, double retotemY,
+        String healthText, int healthColor, String saturationText, int saturationColor,
+        String combinedText, int combinedColor, double healingSize, double healingX, double healingY,
+        double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval, java.util.List<SurvivalItemRule> healingItems, java.util.List<SurvivalItemRule> saturationItems) {
+        this(2, retotemEnabled, healingEnabled, retotemText, retotemColor, retotemSize, retotemX, retotemY, healthText, healthColor, saturationText, saturationColor, combinedText, combinedColor, healingSize, healingX, healingY, healthPercent, saturationThreshold, harpVolume, bassVolume,harpPitch,bassPitch,audioStartInterval,audioEndInterval,healingItems,saturationItems,SoundEntry.legacy(harpVolume,bassVolume,harpPitch,bassPitch),true,12,.22,0xff2020,true);
+    }
+    public static SurvivalConfig defaults() {
+        return new SurvivalConfig(2, true, true, "EQUIP TOTEM!", 0xffff55, 1.5, 50, 18,
+                "LOW HEALTH !", 0xff3333, "Low saturation!", 0xff9900,
+                "LOW HEALTH + SAT!", 0xaa0000, 1.5, 50, 10, 50, 10, .5, .5, 1, 1, .75, .25, SurvivalItemRule.healingDefaults(), SurvivalItemRule.saturationDefaults());
+    }
+    public SurvivalConfig validated() {
+        if (schemaVersion != 2) throw new IllegalArgumentException("Unsupported configuration version");
+        return new SurvivalConfig(2, retotemEnabled, healingEnabled,
+                text(retotemText, "EQUIP TOTEM!"), retotemColor & 0xffffff,
+                clamp(retotemSize, .5, 4, 1.5), clamp(retotemX, 0, 100, 50), clamp(retotemY, 0, 100, 18),
+                text(healthText, "LOW HEALTH !"), healthColor & 0xffffff,
+                text(saturationText, "Low saturation!"), saturationColor & 0xffffff,
+                text(combinedText, "LOW HEALTH + SAT!"), combinedColor & 0xffffff,
+                clamp(healingSize, .5, 4, 1.5), clamp(healingX, 0, 100, 50), clamp(healingY, 0, 100, 10),
+                clamp(healthPercent, 0, 100, 50), clamp(saturationThreshold, 0, 20, 10), clamp(harpVolume, 0, 1, .5), clamp(bassVolume, 0, 1, .5),
+                clamp(harpPitch, .5, 2, 1), clamp(bassPitch, .5, 2, 1),
+                clamp(audioStartInterval, .05, 3, .75),
+                Math.min(clamp(audioStartInterval, .05, 3, .75), clamp(audioEndInterval, .05, 3, .25)),
+                SurvivalItemRule.validated(healingItems, SurvivalItemRule.healingDefaults()),
+                SurvivalItemRule.validated(saturationItems, SurvivalItemRule.saturationDefaults()),
+                sounds == null ? SoundEntry.legacy(harpVolume, bassVolume, harpPitch, bassPitch) : sounds.stream().filter(java.util.Objects::nonNull).map(SoundEntry::validated).toList(),
+                damageIndicatorEnabled, Math.max(1, Math.min(80, damageIndicatorThickness)),
+                clamp(damageIndicatorOpacity, 0.01, 1, .22), damageIndicatorColor & 0xffffff, enabled);
+    }
+    private static String text(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.substring(0, Math.min(80, value.length()));
+    }
+    private static double clamp(double n, double min, double max, double fallback) {
+        return Double.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+    }
+}
