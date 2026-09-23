@@ -80,6 +80,18 @@ class ProfileManagerTest {
         }
     }
 
+    @Test void moduleSettingsCanBeReadChangedPersistedAndActivated() throws Exception {
+        var active = new AtomicReference<ProfileSettings>();
+        Path path = directory.resolve("profiles.json");
+        var manager = new ProfileManager(path, active::set); manager.load(ProfileSettings.defaults());
+        assertTrue(manager.moduleEnabled(ProfileManager.Module.VECTORS) == manager.active().settings().vectors().enabled());
+        manager.setModuleEnabled(ProfileManager.Module.VECTORS, true);
+        assertTrue(manager.moduleEnabled(ProfileManager.Module.VECTORS));
+        assertTrue(active.get().vectors().enabled());
+        var reloaded = new ProfileManager(path, ignored -> {}); reloaded.load(ProfileSettings.defaults());
+        assertTrue(reloaded.moduleEnabled(ProfileManager.Module.VECTORS));
+    }
+
     @Test void failedAtomicSaveLeavesSelectionAndLiveSettingsUnchanged() throws Exception {
         Path path = directory.resolve("profiles.json");
         var active = new AtomicReference<ProfileSettings>();

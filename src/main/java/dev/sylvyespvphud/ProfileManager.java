@@ -18,6 +18,19 @@ import org.slf4j.LoggerFactory;
 
 /** Owns persisted profiles and the runtime baseline/server/override selection state. */
 public final class ProfileManager {
+    public enum Module {
+        PITCH("pitch"), DAMAGE("damage"), ATTRIBUTE_SWAPS("attribute-swaps"),
+        SURVIVAL("survival"), REACH_OUTLINES("reach-outlines"), VECTORS("vectors"),
+        PLAYER_TRACKER("player-tracker");
+
+        private final String commandName;
+        Module(String commandName) { this.commandName = commandName; }
+        public String commandName() { return commandName; }
+        public static Module fromCommandName(String value) {
+            for (Module module : values()) if (module.commandName.equalsIgnoreCase(value)) return module;
+            throw new IllegalArgumentException("Unknown setting: " + value);
+        }
+    }
     private static final Logger LOG = LoggerFactory.getLogger("sylvyespvphud");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private final Path path;
@@ -76,6 +89,41 @@ public final class ProfileManager {
         ProfileCatalog next = new ProfileCatalog(ProfileCatalog.VERSION, catalog.baselineProfileId(), profiles).validated();
         persist(next); catalog = next; activator.accept(valid);
     }
+
+    public synchronized boolean moduleEnabled(Module module) {
+        ProfileSettings settings = active().settings();
+        return switch (module) {
+            case PITCH -> settings.pitch().enabled();
+            case DAMAGE -> settings.damage().enabled();
+            case ATTRIBUTE_SWAPS -> settings.attributeSwaps().enabled();
+            case SURVIVAL -> settings.survival().enabled();
+            case REACH_OUTLINES -> settings.reachOutlines().enabled();
+            case VECTORS -> settings.vectors().enabled();
+            case PLAYER_TRACKER -> settings.playerTracker().enabled();
+        };
+    }
+
+    public synchronized void setModuleEnabled(Module module, boolean enabled) throws IOException {
+        ProfileSettings settings = active().settings();
+        ProfileSettings changed = switch (module) {
+            case PITCH -> new ProfileSettings(withEnabled(settings.pitch(), enabled), settings.damage(), settings.attributeSwaps(), settings.survival(), settings.hud(), settings.reachOutlines(), settings.vectors(), settings.playerTracker());
+            case DAMAGE -> new ProfileSettings(settings.pitch(), withEnabled(settings.damage(), enabled), settings.attributeSwaps(), settings.survival(), settings.hud(), settings.reachOutlines(), settings.vectors(), settings.playerTracker());
+            case ATTRIBUTE_SWAPS -> new ProfileSettings(settings.pitch(), settings.damage(), withEnabled(settings.attributeSwaps(), enabled), settings.survival(), settings.hud(), settings.reachOutlines(), settings.vectors(), settings.playerTracker());
+            case SURVIVAL -> new ProfileSettings(settings.pitch(), settings.damage(), settings.attributeSwaps(), withEnabled(settings.survival(), enabled), settings.hud(), settings.reachOutlines(), settings.vectors(), settings.playerTracker());
+            case REACH_OUTLINES -> new ProfileSettings(settings.pitch(), settings.damage(), settings.attributeSwaps(), settings.survival(), settings.hud(), withEnabled(settings.reachOutlines(), enabled), settings.vectors(), settings.playerTracker());
+            case VECTORS -> new ProfileSettings(settings.pitch(), settings.damage(), settings.attributeSwaps(), settings.survival(), settings.hud(), settings.reachOutlines(), withEnabled(settings.vectors(), enabled), settings.playerTracker());
+            case PLAYER_TRACKER -> new ProfileSettings(settings.pitch(), settings.damage(), settings.attributeSwaps(), settings.survival(), settings.hud(), settings.reachOutlines(), settings.vectors(), withEnabled(settings.playerTracker(), enabled));
+        };
+        updateActive(changed);
+    }
+
+    private static PitchConfig withEnabled(PitchConfig c, boolean value) { return new PitchConfig(c.schemaVersion(),value,c.width(),c.thickness(),c.color(),c.opacity(),c.targetPitch(),c.sensitivity(),c.maxDisplacement(),c.thirdPerson()); }
+    private static DamageConfig withEnabled(DamageConfig c, boolean value) { return new DamageConfig(c.schemaVersion(),c.fallEnabled(),c.fallColor(),c.fallSize(),c.fallX(),c.fallY(),c.hitEnabled(),c.hitColor(),c.hitSize(),c.hitX(),c.hitY(),c.hitSeconds(),c.calculatedDamage(),c.fallTemplate(),c.hitTemplate(),c.fallThreshold(),c.fallColors(),c.hitColors(),c.maceEnabled(),c.spearEnabled(),c.swordAxeEnabled(),c.useEnemyGear(),c.boldCriticalDamage(),value,c.trackerEnabled(),c.trackerSeconds(),c.trackerTemplate(),c.trackerHudSeconds(),c.trackerHudAlwaysVisible()); }
+    private static AttributeSwapConfig withEnabled(AttributeSwapConfig c, boolean value) { return new AttributeSwapConfig(c.schemaVersion(),c.visualEnabled(),c.soundEnabled(),c.soundId(),c.weaponOnly(),c.successfulHitOnly(),value); }
+    private static SurvivalConfig withEnabled(SurvivalConfig c, boolean value) { return new SurvivalConfig(c.schemaVersion(),c.retotemEnabled(),c.healingEnabled(),c.retotemText(),c.retotemColor(),c.retotemSize(),c.retotemX(),c.retotemY(),c.healthText(),c.healthColor(),c.saturationText(),c.saturationColor(),c.combinedText(),c.combinedColor(),c.healingSize(),c.healingX(),c.healingY(),c.healthPercent(),c.saturationThreshold(),c.harpVolume(),c.bassVolume(),c.harpPitch(),c.bassPitch(),c.audioStartInterval(),c.audioEndInterval(),c.healingItems(),c.saturationItems(),c.sounds(),c.damageIndicatorEnabled(),c.damageIndicatorThickness(),c.damageIndicatorOpacity(),c.damageIndicatorColor(),value); }
+    private static ReachOutlineConfig withEnabled(ReachOutlineConfig c, boolean value) { return new ReachOutlineConfig(c.schemaVersion(),value,c.color(),c.intensity(),c.thickness(),c.topFacesOnly(),c.hardToReachMode(),c.minimumReachableArea()); }
+    private static VectorsConfig withEnabled(VectorsConfig c, boolean value) { return new VectorsConfig(c.schemaVersion(),value,c.reticleEnabled(),c.velocityEnabled(),c.elytraOnly(),c.spearOnly(),c.icon(),c.size(),c.color(),c.opacity(),c.stationaryThreshold(),c.velocityThreshold(),c.velocityTemplate(),c.velocityColors()); }
+    private static TrackerConfig withEnabled(TrackerConfig c, boolean value) { return new TrackerConfig(c.schemaVersion(),value,c.radius(),c.opacity(),c.iconSize(),c.onlyWhenPlayerListHeld(),c.displayMode(),c.hideLocatorBar(),c.distanceScalingStrength(),c.showDistance(),c.hideDistantPlayers(),c.hideStartDistance(),c.maxVisiblePlayers()); }
 
     public synchronized SettingsProfile create(String requestedName, boolean copyActive) throws IOException {
         String name = availableName(validateName(requestedName));

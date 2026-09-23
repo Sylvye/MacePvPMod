@@ -31,7 +31,7 @@ Select a module from the directory. Each module has its own settings page and co
 
 ### Settings profiles
 
-Every module, behavior setting, and HUD layout belongs to the active profile. Open **Manage** on the Settings overview or run `/hudprofile` to create, duplicate, rename, delete, share, and switch profiles. `/hudprofile <name>` switches directly (quote names containing spaces), and `/hudprofile auto` clears a temporary override and reapplies the current server assignment.
+Every module, behavior setting, and HUD layout belongs to the active profile. Open **Manage** on the Settings overview to create, duplicate, rename, delete, and share profiles. `/hudprofile` reports the active profile; `/hudprofile profile <name>` switches directly (quote names containing spaces), and `/hudprofile profile auto` clears a temporary override and reapplies the current server assignment. Toggle modules with `/hudprofile <module> on|off`; omitting the value reports the current state. Commands provide setting, value, and profile-name autocomplete.
 
 Profiles may own exact multiplayer server addresses. Hostnames are case-insensitive, trailing dots are ignored, and an omitted port means `25565`; wildcard matching and DNS resolution are not used. One address can belong to only one profile. Joining a matched server selects its profile, an unmatched server keeps the pre-connect baseline, and disconnecting restores that baseline. A manual switch while connected lasts until disconnect. **Add current server** is available during identifiable multiplayer connections; single-player worlds are not assigned.
 

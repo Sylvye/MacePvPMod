@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,15 +56,20 @@ public final class SylvyesPvPHud implements ClientModInitializer {
             return 1;
         })));
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> dispatcher.register(literal("hudprofile")
-                .executes(context -> { Minecraft.getInstance().gui.setScreen(new ProfileScreen(null)); return 1; })
-                .then(argument("profile", StringArgumentType.string())
-                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(java.util.stream.Stream.of("auto"), PROFILES.profiles().stream().map(p -> StringArgumentType.escapeIfRequired(p.name()))), builder))
-                        .executes(context -> switchProfile(StringArgumentType.getString(context, "profile"))))));
+                .executes(context -> showActiveProfile())
+                .then(argument("setting", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(
+                                java.util.stream.Stream.of("profile"), Arrays.stream(ProfileManager.Module.values()).map(ProfileManager.Module::commandName)), builder))
+                        .executes(context -> readProfileSetting(StringArgumentType.getString(context, "setting")))
+                        .then(argument("value", StringArgumentType.string())
+                                .suggests((context, builder) -> suggestProfileValue(StringArgumentType.getString(context, "setting"), builder))
+                                .executes(context -> writeProfileSetting(StringArgumentType.getString(context, "setting"), StringArgumentType.getString(context, "value")))))));
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var server = client.getCurrentServer();
             if (!client.isLocalServer() && server != null) {
                 try { PROFILES.join(server.ip); }
                 catch (IllegalArgumentException error) { LOG.warn("Could not identify connected server for profile selection: {}", server.ip, error); }
+                message("HUD profile: " + PROFILES.active().name());
             }
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> PROFILES.disconnect());
@@ -98,13 +104,54 @@ public final class SylvyesPvPHud implements ClientModInitializer {
         });
     }
 
-    private static int switchProfile(String name) {
+    private static int showActiveProfile() {
+        clearChatDraft();
+        message("HUD profile: " + PROFILES.active().name() + " (" + PROFILES.selectionDescription() + ")");
+        return 1;
+    }
+
+    private static int readProfileSetting(String setting) {
+        clearChatDraft();
         try {
-            if (name.equalsIgnoreCase("auto")) { PROFILES.useAutomatic(); message("Using automatic HUD profile selection: " + PROFILES.active().name()); }
-            else { PROFILES.switchManual(name); message("HUD profile: " + PROFILES.active().name()); }
+            if (setting.equalsIgnoreCase("profile")) return showActiveProfile();
+            ProfileManager.Module module = ProfileManager.Module.fromCommandName(setting);
+            message("HUD profile " + module.commandName() + ": " + (PROFILES.moduleEnabled(module) ? "on" : "off"));
+            return 1;
+        } catch (Exception error) { message("Could not read HUD profile setting: " + error.getMessage()); return 0; }
+    }
+
+    private static int writeProfileSetting(String setting, String value) {
+        clearChatDraft();
+        try {
+            if (setting.equalsIgnoreCase("profile")) {
+                if (value.equalsIgnoreCase("auto")) { PROFILES.useAutomatic(); message("Using automatic HUD profile selection: " + PROFILES.active().name()); }
+                else { PROFILES.switchManual(value); message("HUD profile: " + PROFILES.active().name()); }
+            } else {
+                ProfileManager.Module module = ProfileManager.Module.fromCommandName(setting);
+                boolean enabled = switch (value.toLowerCase(java.util.Locale.ROOT)) {
+                    case "on", "true", "enable", "enabled" -> true;
+                    case "off", "false", "disable", "disabled" -> false;
+                    default -> throw new IllegalArgumentException("Expected on or off for " + module.commandName());
+                };
+                PROFILES.setModuleEnabled(module, enabled);
+                message("HUD profile " + module.commandName() + ": " + (enabled ? "on" : "off"));
+            }
             return 1;
         }
-        catch (Exception error) { message("Could not switch HUD profile: " + error.getMessage()); return 0; }
+        catch (Exception error) { message("Could not update HUD profile setting: " + error.getMessage()); return 0; }
+    }
+
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestProfileValue(
+            String setting, com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
+        if (setting.equalsIgnoreCase("profile")) return SharedSuggestionProvider.suggest(
+                java.util.stream.Stream.concat(java.util.stream.Stream.of("auto"), PROFILES.profiles().stream().map(p -> StringArgumentType.escapeIfRequired(p.name()))), builder);
+        try { ProfileManager.Module.fromCommandName(setting); return SharedSuggestionProvider.suggest(new String[]{"on", "off"}, builder); }
+        catch (IllegalArgumentException ignored) { return builder.buildFuture(); }
+    }
+
+    private static void clearChatDraft() {
+        Minecraft client = Minecraft.getInstance();
+        if (client.gui != null && client.gui.hud != null) client.gui.hud.getChat().discardDraft();
     }
 
     static void message(String value) {
