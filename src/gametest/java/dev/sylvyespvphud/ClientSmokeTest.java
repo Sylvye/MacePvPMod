@@ -10,6 +10,9 @@ public final class ClientSmokeTest implements FabricClientGameTest {
     private static void click(ClientGameTestContext context,String label){context.runOnClient(mc->button(mc,label).onPress(null));}
     public void runTest(ClientGameTestContext context){
         context.runOnClient(mc->{try{SylvyesPvPHud.CONFIG.save(PitchConfig.defaults());SylvyesPvPHud.DAMAGE_CONFIG.save(DamageConfig.defaults());SylvyesPvPHud.HUD_CONFIG.save(HudConfig.defaults());}catch(Exception e){throw new RuntimeException(e);}});
+        context.setScreen(()->new ProfileScreen(null));context.waitTick();
+        context.runOnClient(mc->{check(!button(mc,"Add current server").active,"Current server action enabled outside multiplayer");check(button(mc,"Use profile")!=null,"Profile switch action missing");});
+        click(context,"Share");click(context,"Copy shortest ("+SylvyesPvPHud.PROFILES.exportProfile(SylvyesPvPHud.PROFILES.active().id()).length()+")");context.runOnClient(mc->check(mc.keyboardHandler.getClipboard().startsWith("SPH2:"),"Profile clipboard payload missing version prefix"));click(context,"Copy ASCII ("+SylvyesPvPHud.PROFILES.exportProfileAscii(SylvyesPvPHud.PROFILES.active().id()).length()+")");context.runOnClient(mc->check(mc.keyboardHandler.getClipboard().startsWith("SPH2A:"),"ASCII profile payload missing version prefix"));
         context.setScreen(()->new SettingsScreen(null));click(context,"HUD Studio");click(context,"Fall distance");click(context,"Edit position & size");context.waitTick();
         context.runOnClient(mc->{
             var screen=(HudPlacementScreen)mc.gui.screen();var saved=SylvyesPvPHud.HUD_CONFIG.current().fall();var bounds=screen.currentBounds();check(bounds!=null,"Unified HUD canvas did not render");

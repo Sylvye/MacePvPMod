@@ -15,6 +15,7 @@ public final class DamageConfigStore {
     private boolean writable = true;
     public DamageConfigStore(Path path) { this.path = path; }
     public DamageConfig current() { return current; }
+    void activate(DamageConfig next) { current = next.validated(); }
     public void load() {
         if (!Files.exists(path)) return;
         try {

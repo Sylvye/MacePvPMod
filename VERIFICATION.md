@@ -12,6 +12,15 @@ Environment: macOS ARM64, Java 25.0.4.1, Minecraft 26.2, Fabric Loader 0.19.3, F
 
 Limits: Vulkan was not tested. Actual window resizing, spectator mode, the unbound shortcut after user assignment, and clicking the configuration button through Mod Menu itself were not manually exercised. Settings and optional Mod Menu integration compile against the real 26.2 APIs; configuration screens were exercised directly by the client tests. Live multiplayer combat has not been verified; damage reporting uses observed health changes, not damage predictions.
 
+## Settings profiles — September 21, 2026
+
+- Added a versioned, atomic profile catalog spanning all eight configuration records, with one-time import of the legacy loose files.
+- Unit coverage verifies catalog creation/reload, invalid-catalog backup, exact address normalization, unique server ownership, matched/unmatched selection, connection-scoped overrides, automatic restoration, clipboard round trips, address exclusion, damaged imports, and collision-safe imported names.
+- `/hudprofile`, `/hudprofile <name>`, and `/hudprofile auto` are client commands; profile activation and server matching send no packets.
+- New clipboard payloads use a typed binary delta from defaults, optional raw DEFLATE, CRC32 integrity, and a 1 MiB decoded limit. Dense Unicode `SPH2:` is the shortest default; URL-safe Base64 `SPH2A:` is the compatibility fallback, and legacy gzip/Base64 `SPH1:` remains importable.
+- Oversized Unicode exports are split into numbered sub-1,900-character Discord chunks. Import validates a complete, non-duplicated, single-format chunk set before decoding.
+- Limitation: automated tests model connection transitions directly; live server, Realms, and operating-system clipboard interaction have not been manually exercised.
+
 
 ## Damage Counter update
 

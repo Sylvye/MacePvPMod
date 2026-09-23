@@ -56,27 +56,7 @@ final class SettingsSession {
     void apply() throws IOException {
         String error = validation();
         if (!error.isEmpty()) throw new IOException(error);
-        try {
-            SylvyesPvPHud.CONFIG.save(pitch);
-            SylvyesPvPHud.DAMAGE_CONFIG.save(damage);
-            SylvyesPvPHud.ATTRIBUTE_SWAP_CONFIG.save(swap);
-            SylvyesPvPHud.SURVIVAL_CONFIG.save(survival);
-            SylvyesPvPHud.HUD_CONFIG.save(hud);
-            SylvyesPvPHud.REACH_OUTLINE_CONFIG.save(reach);
-            SylvyesPvPHud.VECTORS_CONFIG.save(vectors);
-            SylvyesPvPHud.TRACKER_CONFIG.save(tracker);
-        } catch (IOException failure) {
-            // Restore both disk and live state when any later store fails.
-            try { SylvyesPvPHud.CONFIG.save(originalPitch); } catch (IOException ignored) {}
-            try { SylvyesPvPHud.DAMAGE_CONFIG.save(originalDamage); } catch (IOException ignored) {}
-            try { SylvyesPvPHud.ATTRIBUTE_SWAP_CONFIG.save(originalSwap); } catch (IOException ignored) {}
-            try { SylvyesPvPHud.SURVIVAL_CONFIG.save(originalSurvival); } catch (IOException ignored) {}
-            try { SylvyesPvPHud.HUD_CONFIG.save(originalHud); } catch (IOException ignored) {}
-            try { SylvyesPvPHud.REACH_OUTLINE_CONFIG.save(originalReach); } catch (IOException ignored) {}
-            try { SylvyesPvPHud.VECTORS_CONFIG.save(originalVectors); } catch (IOException ignored) {}
-            try { SylvyesPvPHud.TRACKER_CONFIG.save(originalTracker); } catch (IOException ignored) {}
-            throw failure;
-        }
+        SylvyesPvPHud.PROFILES.updateActive(new ProfileSettings(pitch, damage, swap, survival, hud, reach, vectors, tracker));
     }
 
     void discard() {

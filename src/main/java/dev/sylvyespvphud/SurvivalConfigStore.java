@@ -15,6 +15,7 @@ public final class SurvivalConfigStore {
     private boolean writable = true;
     public SurvivalConfigStore(Path path) { this.path = path; }
     public SurvivalConfig current() { return current; }
+    void activate(SurvivalConfig next) { current = next.validated(); }
     public void load() {
         if (!Files.exists(path)) return;
         try {

@@ -15,6 +15,7 @@ public final class VectorsConfigStore {
     private boolean writable = true;
     public VectorsConfigStore(Path path) { this.path = path; }
     public VectorsConfig current() { return current; }
+    void activate(VectorsConfig next) { current = next.validated(); }
     public void load() {
         if (!Files.exists(path)) return;
         try {

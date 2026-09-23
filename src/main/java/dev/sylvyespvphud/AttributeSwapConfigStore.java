@@ -15,6 +15,7 @@ public final class AttributeSwapConfigStore {
     private boolean writable = true;
     public AttributeSwapConfigStore(Path path) { this.path = path; }
     public AttributeSwapConfig current() { return current; }
+    void activate(AttributeSwapConfig next) { current = next.validated(); }
     public void load() {
         if (!Files.exists(path)) return;
         try {

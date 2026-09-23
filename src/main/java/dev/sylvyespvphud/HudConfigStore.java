@@ -15,6 +15,7 @@ public final class HudConfigStore {
     private boolean writable = true;
     public HudConfigStore(Path path) { this.path = path; }
     public HudConfig current() { return current; }
+    void activate(HudConfig next) { current = next.validated(); }
     public void load() {
         if (!Files.exists(path)) { current = HudConfig.migrate(SylvyesPvPHud.CONFIG.current(), SylvyesPvPHud.DAMAGE_CONFIG.current(), SylvyesPvPHud.SURVIVAL_CONFIG.current()); return; }
         try {

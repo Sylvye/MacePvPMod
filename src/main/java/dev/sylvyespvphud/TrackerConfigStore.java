@@ -11,7 +11,7 @@ public final class TrackerConfigStore {
     private static final Logger LOG=LoggerFactory.getLogger("sylvyespvphud");
     private static final Gson GSON=new GsonBuilder().setPrettyPrinting().create();
     private final Path path;private TrackerConfig current=TrackerConfig.defaults();private boolean writable=true;
-    public TrackerConfigStore(Path path){this.path=path;} public TrackerConfig current(){return current;}
+    public TrackerConfigStore(Path path){this.path=path;} public TrackerConfig current(){return current;} void activate(TrackerConfig next){current=next.validated();}
     public void load(){if(!Files.exists(path))return;try{JsonObject saved=JsonParser.parseString(Files.readString(path)).getAsJsonObject();int version=saved.has("schemaVersion")?saved.get("schemaVersion").getAsInt():1;
             if(version==1){var defaults=TrackerConfig.defaults();saved.addProperty("distanceScalingStrength",defaults.distanceScalingStrength());saved.addProperty("showDistance",defaults.showDistance());saved.addProperty("hideDistantPlayers",false);saved.addProperty("hideStartDistance",defaults.hideStartDistance());}
             if(version==1||version==2){saved.addProperty("schemaVersion",3);saved.addProperty("maxVisiblePlayers",0);}

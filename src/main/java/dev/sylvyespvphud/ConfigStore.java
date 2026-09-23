@@ -15,6 +15,7 @@ public final class ConfigStore {
     private boolean writable = true;
     public ConfigStore(Path path) { this.path = path; }
     public PitchConfig current() { return current; }
+    void activate(PitchConfig next) { current = next.validated(); }
     public void load() {
         if (!Files.exists(path)) return;
         try {

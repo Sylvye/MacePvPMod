@@ -29,13 +29,23 @@ Open **Mods → SylvyesPvPHud → Configure**, or assign **Open SylvyesPvPHud se
 
 Select a module from the directory. Each module has its own settings page and configuration file; HUD Studio edits the shared overlay styles.
 
+### Settings profiles
+
+Every module, behavior setting, and HUD layout belongs to the active profile. Open **Manage** on the Settings overview or run `/hudprofile` to create, duplicate, rename, delete, share, and switch profiles. `/hudprofile <name>` switches directly (quote names containing spaces), and `/hudprofile auto` clears a temporary override and reapplies the current server assignment.
+
+Profiles may own exact multiplayer server addresses. Hostnames are case-insensitive, trailing dots are ignored, and an omitted port means `25565`; wildcard matching and DNS resolution are not used. One address can belong to only one profile. Joining a matched server selects its profile, an unmatched server keeps the pre-connect baseline, and disconnecting restores that baseline. A manual switch while connected lasts until disconnect. **Add current server** is available during identifiable multiplayer connections; single-player worlds are not assigned.
+
+**Share** opens an offline export screen. **Copy shortest** uses a compact binary delta and a dense Unicode `SPH2:` string designed to fit a standard 2,000-character Discord message; **Copy ASCII** provides a URL-safe Base64 `SPH2A:` fallback. Very large profiles can be copied as numbered Discord chunks and reassembled by importing all chunk lines together. **Import clipboard** accepts both new formats, chunk sets, and legacy `SPH1:` strings, validates the complete payload, and creates a new inactive profile. Shared data excludes server addresses and internal IDs; name collisions receive a numeric suffix.
+
+`config/sylvyespvphud-profiles.json` is the canonical, atomically replaced profile catalog. On first launch with profiles, the existing eight `sylvyespvphud*.json` files are combined into `Default` and retained as recovery copies. Invalid catalogs are backed up as `sylvyespvphud-profiles-invalid-*.json` before recovery.
+
 ### HUD Studio
 
 Select an element to see a centered appearance sample, then choose **Edit position & size**. The layout editor shows a scaled view of the whole screen with the other elements muted for context. Drag the selected text or bar to move it, drag its bottom-right handle to resize it, use arrow keys to nudge it, or use the synchronized position and size sliders. The pitch bar uses width and thickness controls; color and opacity remain on the Studio page.
 
 Switch between **all elements** and **selected only** previews. Samples remain visible even when the corresponding module is disabled. The healing warning has separate low-health, low-saturation, and combined colors. Preview edits apply only after **Save**; **Cancel** discards them.
 
-HUD appearance is stored in `config/sylvyespvphud-hud.json`. Until this file exists, legacy module appearance settings are imported automatically. Existing module files remain intact. Saved HUD appearance takes precedence over their old appearance fields.
+Legacy HUD appearance from `config/sylvyespvphud-hud.json` is imported into the first profile. Until that legacy file exists, older module appearance settings are used for the initial migration.
 
 ### Elytra Pitch Bar
 
@@ -45,7 +55,7 @@ HUD appearance is stored in `config/sylvyespvphud-hud.json`. Until this file exi
 
 Defaults: 100 GUI-pixel width, 1-pixel thickness, `999999` grey, 40% opacity, +40° target, 2 GUI pixels per degree, ±60 GUI pixels of travel.
 
-Settings are stored in `config/sylvyespvphud.json` in the game instance. Changes made externally load at startup. Missing fields use defaults; numeric values are bounded. Invalid configuration is copied to a uniquely named `sylvyespvphud-invalid-*.json` backup and defaults are used. Saving replaces the file atomically; errors leave active settings intact and keep the settings screen open.
+Existing `config/sylvyespvphud.json` settings are imported when the first profile catalog is created. Missing fields use defaults and numeric values are bounded.
 
 ### Damage Counter
 
@@ -55,7 +65,7 @@ Settings are stored in `config/sylvyespvphud.json` in the game instance. Changes
 - Fall defaults to `{blocks} blocks`; hit defaults to `{damage} damage`. Hit messages also support `{blocks}` for the same Minecraft fall distance captured at attack time. Values use one decimal place. For example, `{damage} damage from {blocks} blocks` becomes `18.0 damage from 12.5 blocks`.
 - A non-gliding mace smash is identified at attack time when fall distance is strictly above 1.5 blocks. After the matching server damage event confirms it, the local fall-distance accumulator is reset. The hit message still uses the attack-time snapshot, so the reset does not change its `{blocks}` value. Spear, sword, axe, and elytra-gliding attacks do not trigger this reset.
 - Variable insertion buttons, explanations, and live examples appear beside the fields. Blank messages and unsupported variables block saving. Each new hit replaces the previous hit message.
-- **Save** applies changes; **Cancel** or Escape discards them. Damage settings persist separately in `config/sylvyespvphud-damage.json`.
+- **Save** applies changes to the active profile; **Cancel** or Escape discards them.
 
 **Reported** uses server health updates. A confirmed hit without a measurable health decrease displays **Damage unavailable**. Absorption damage is not included; overlapping damage from other sources may affect observed health loss.
 
@@ -87,7 +97,7 @@ The Vectors module is disabled by default. Reticle settings are **Icon** (`Circl
 
 The displayed magnitude is the length of the effective client movement vector multiplied by 20, in blocks/second. While grounded, vertical movement is ignored; while airborne, vertical movement contributes to both the magnitude and direction. The default velocity color scale is a gradient over 0–40 blocks/second: `#55FF88` at the low end, `#FFFF55` at the midpoint, and `#FF5555` at the high end. The color editor supports Flat or Gradient mode, a flat color, domain minimum/maximum, and ordered gradient keys with editable colors and intermediate positions.
 
-Vectors is hidden while no world/player is loaded, a menu is open, the HUD is hidden (F1), the player is dead, or the player is spectating. Settings are stored in `config/sylvyespvphud-vectors.json`. Version 1 files migrate to version 2 by retaining supported values, enabling both activity filters, and removing the old radius field; invalid files fall back to defaults and are backed up.
+Vectors is hidden while no world/player is loaded, a menu is open, the HUD is hidden (F1), the player is dead, or the player is spectating. Legacy version 1 files migrate to version 2 during initial profile creation by retaining supported values, enabling both activity filters, and removing the old radius field.
 
 ### Attribute Swaps
 
@@ -101,7 +111,7 @@ Detects an attribute-changing hotbar swap during combat and optionally shows an 
 - Low health increases volume and shortens the gap between beats. Existing harp/bass settings migrate into two playlist entries with their original volume and pitch.
 - Text, thresholds, and timing remain here; colors, size, and placement live in **HUD**. Playlist **Done** returns a draft; save Survival instincts to apply it.
 
-These alerts are hidden while viewing menus, spectating, dead, paused, or hiding the HUD. Configurations are stored in `config/sylvyespvphud-attribute-swaps.json` and `config/sylvyespvphud-survival.json`.
+These alerts are hidden while viewing menus, spectating, dead, paused, or hiding the HUD. Existing attribute-swap and survival files are imported into the initial profile.
 
 ## Build and test
 

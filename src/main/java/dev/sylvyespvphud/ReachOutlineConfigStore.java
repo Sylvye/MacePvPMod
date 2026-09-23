@@ -15,6 +15,7 @@ public final class ReachOutlineConfigStore {
     private boolean writable = true;
     public ReachOutlineConfigStore(Path path) { this.path = path; }
     public ReachOutlineConfig current() { return current; }
+    void activate(ReachOutlineConfig next) { current = next.validated(); }
     public void load() {
         if (!Files.exists(path)) return;
         try { current = GSON.fromJson(Files.readString(path), ReachOutlineConfig.class).validated(); }
