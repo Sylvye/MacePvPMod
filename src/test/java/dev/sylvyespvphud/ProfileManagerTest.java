@@ -1,6 +1,7 @@
 package dev.sylvyespvphud;
 
 import static org.junit.jupiter.api.Assertions.*;
+import com.google.gson.JsonParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicReference;
@@ -21,6 +22,20 @@ class ProfileManagerTest {
         var reloaded = new ProfileManager(directory.resolve("profiles.json"), active::set);
         reloaded.load(ProfileSettings.defaults());
         assertEquals(manager.profiles(), reloaded.profiles());
+    }
+
+    @Test void existingCatalogMigratesTrackerWithoutResettingOtherSettings() throws Exception {
+        Path path=directory.resolve("profiles.json");
+        var manager=new ProfileManager(path,ignored->{});manager.load(ProfileSettings.defaults());
+        var root=JsonParser.parseString(Files.readString(path)).getAsJsonObject();
+        var tracker=root.getAsJsonArray("profiles").get(0).getAsJsonObject().getAsJsonObject("settings").getAsJsonObject("playerTracker");
+        tracker.addProperty("schemaVersion",3);tracker.addProperty("radius",84);tracker.addProperty("hideDistantPlayers",true);
+        tracker.remove("placement");tracker.remove("nearFadeDistance");
+        Files.writeString(path,root.toString());
+        var reloaded=new ProfileManager(path,ignored->{});reloaded.load(ProfileSettings.defaults());
+        var migrated=reloaded.active().settings().playerTracker();
+        assertEquals(4,migrated.schemaVersion());assertEquals(84,migrated.radius());assertTrue(migrated.hideDistantPlayers());
+        assertEquals(TrackerPlacement.RING,migrated.placement());assertEquals(20,migrated.nearFadeDistance());
     }
 
     @Test void matchingOverrideAutoAndDisconnectFollowSelectionRules() throws Exception {

@@ -92,7 +92,7 @@ final class SettingsSession {
         if (page == 4) survival = copySurvival(!survival.enabled());
         if (page == 5) reach = new ReachOutlineConfig(1,!reach.enabled(),reach.color(),reach.intensity(),reach.thickness(),reach.topFacesOnly(),reach.hardToReachMode(),reach.minimumReachableArea());
         if (page == 6) vectors = new VectorsConfig(2,!vectors.enabled(),vectors.reticleEnabled(),vectors.velocityEnabled(),vectors.elytraOnly(),vectors.spearOnly(),vectors.icon(),vectors.size(),vectors.color(),vectors.opacity(),vectors.stationaryThreshold(),vectors.velocityThreshold(),vectors.velocityTemplate(),vectors.velocityColors());
-        if (page == 7) tracker = new TrackerConfig(3,!tracker.enabled(),tracker.radius(),tracker.opacity(),tracker.iconSize(),tracker.onlyWhenPlayerListHeld(),tracker.displayMode(),tracker.hideLocatorBar(),tracker.distanceScalingStrength(),tracker.showDistance(),tracker.hideDistantPlayers(),tracker.hideStartDistance(),tracker.maxVisiblePlayers());
+        if (page == 7) tracker = new TrackerConfig(4,!tracker.enabled(),tracker.radius(),tracker.opacity(),tracker.iconSize(),tracker.onlyWhenPlayerListHeld(),tracker.displayMode(),tracker.hideLocatorBar(),tracker.distanceScalingStrength(),tracker.showDistance(),tracker.hideDistantPlayers(),tracker.hideStartDistance(),tracker.maxVisiblePlayers(),tracker.placement(),tracker.nearFadeDistance());
     }
 
     boolean enabled(int page) { return switch(page) { case 1 -> pitch.enabled(); case 2 -> damage.enabled(); case 3 -> swap.enabled(); case 4 -> survival.enabled(); case 5 -> reach.enabled(); case 6 -> vectors.enabled(); case 7 -> tracker.enabled(); default -> true; }; }

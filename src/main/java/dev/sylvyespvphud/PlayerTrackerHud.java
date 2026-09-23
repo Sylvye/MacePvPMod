@@ -38,17 +38,45 @@ public final class PlayerTrackerHud {
         int first=TrackerMath.firstVisibleIndex(targets.size(),config.maxVisiblePlayers());
         for(int i=first;i<targets.size();i++){
             Target target=targets.get(i);TrackedWaypoint waypoint=target.waypoint();UUID id=target.id();PlayerInfo info=target.info();double distance=target.distance();
-            int alpha=(int)Math.round(config.opacity()*TrackerMath.fade(distance,config.hideDistantPlayers(),config.hideStartDistance())*255);
+            var mainCamera=mc.gameRenderer.mainCamera();
+            var trackedPlayer=level.getPlayerByUUID(id);
+            float playerPartial=trackedPlayer==null?0:partial.apply(trackedPlayer);
+            Vec3 eye=trackedPlayer==null?null:trackedPlayer.getEyePosition(playerPartial);
+            double nearOpacity=config.placement()==TrackerPlacement.HORIZON&&eye!=null
+                    ?TrackerMath.nearFade(mainCamera.position().distanceTo(eye),config.nearFadeDistance()):1;
+            int alpha=(int)Math.round(config.opacity()*TrackerMath.fade(distance,config.hideDistantPlayers(),config.hideStartDistance())*nearOpacity*255);
+            if(alpha<=0)continue;
             int iconSize=Math.max(1,(int)Math.round(config.iconSize()*TrackerMath.scale(distance,config.distanceScalingStrength(),config.hideStartDistance())));
             double bearing=waypoint.yawAngleToCamera(level,mc.gameRenderer.mainCamera(),partial);
-            var point=TrackerMath.onRing(bearing,cx,cy,config.radius());int x=(int)Math.round(point.x()-iconSize/2.0),y=(int)Math.round(point.y()-iconSize/2.0);
+            TrackerMath.Point point;
+            int x,y;
+            if(config.placement()==TrackerPlacement.HORIZON){
+                Vec3 position=eye==null?TrackerMath.horizonPosition(mainCamera.position(),mainCamera.yRot(),bearing)
+                        :trackedPlayer.getPosition(playerPartial).add(0,trackedPlayer.getBbHeight(),0);
+                Vec3 offset=position.subtract(mainCamera.position());
+                var forward=mainCamera.forwardVector();
+                double forwardDistance=offset.x*forward.x()+offset.y*forward.y()+offset.z*forward.z();
+                point=TrackerMath.screenPoint(mc.gameRenderer.projectPointToScreen(position),forwardDistance,graphics.guiWidth(),graphics.guiHeight());
+                if(point==null)continue;
+                if(eye!=null){
+                    var icon=TrackerMath.aboveHeadIcon(point,iconSize,graphics.guiWidth(),graphics.guiHeight());
+                    if(icon==null)continue;
+                    x=icon.x();y=icon.y();
+                }else{x=(int)Math.round(point.x()-iconSize/2.0);y=(int)Math.round(point.y()-iconSize/2.0);}
+            }else{
+                point=TrackerMath.onRing(bearing,cx,cy,config.radius());
+                x=(int)Math.round(point.x()-iconSize/2.0);y=(int)Math.round(point.y()-iconSize/2.0);
+            }
             if(config.displayMode()==TrackerDisplayMode.HEADS)drawHead(graphics,info,x,y,iconSize,alpha);
             else drawCircle(graphics,x+iconSize/2,y+iconSize/2,iconSize,ARGB.color(alpha,waypointColor(waypoint,id)));
-            var trackedPlayer=level.getPlayerByUUID(id);var fallback=waypoint.pitchDirectionToCamera(level,mc.gameRenderer,partial);
-            var mainCamera=mc.gameRenderer.mainCamera();
-            var direction=trackedPlayer==null?fallback:lookDirection(mainCamera.position(),mainCamera.xRot(),trackedPlayer.getEyePosition(partial.apply(trackedPlayer)),fallback);
-            drawVerticalBadge(graphics,x,y,iconSize,direction,alpha);
-            if(config.showDistance()&&Double.isFinite(distance))drawDistance(graphics,x,y,iconSize,point.y()<cy,direction,TrackerMath.distanceLabel(distance),alpha);
+            var direction=TrackedWaypoint.PitchDirection.NONE;
+            if(config.placement()==TrackerPlacement.RING){
+                var fallback=waypoint.pitchDirectionToCamera(level,mc.gameRenderer,partial);
+                direction=eye==null?fallback:lookDirection(mainCamera.position(),mainCamera.xRot(),eye,fallback);
+                drawVerticalBadge(graphics,x,y,iconSize,direction,alpha);
+            }
+            boolean labelAbove=eye!=null&&config.placement()==TrackerPlacement.HORIZON||point.y()<cy;
+            if(config.showDistance()&&Double.isFinite(distance))drawDistance(graphics,x,y,iconSize,labelAbove,direction,TrackerMath.distanceLabel(distance),alpha);
         }
     }
     private static void drawHead(GuiGraphicsExtractor graphics,PlayerInfo info,int x,int y,int size,int alpha){
@@ -75,7 +103,7 @@ public final class PlayerTrackerHud {
     private static void drawDistance(GuiGraphicsExtractor graphics,int markerX,int markerY,int markerSize,boolean aboveCursor,TrackedWaypoint.PitchDirection direction,String label,int alpha){
         var font=Minecraft.getInstance().font;int x=markerX+(markerSize-font.width(label))/2;
         int arrowSpace=(aboveCursor&&direction==TrackedWaypoint.PitchDirection.UP)||(!aboveCursor&&direction==TrackedWaypoint.PitchDirection.DOWN)?arrowHeight(markerSize)+4:0;
-        int y=aboveCursor?markerY-font.lineHeight-3-arrowSpace:markerY+markerSize+3+arrowSpace;
+        int y=aboveCursor?TrackerMath.distanceLabelYAbove(markerY,font.lineHeight)-arrowSpace:markerY+markerSize+3+arrowSpace;
         graphics.text(font,label,x,y,ARGB.color(alpha,0xffffff),true);
     }
 }

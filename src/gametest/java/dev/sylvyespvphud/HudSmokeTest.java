@@ -19,7 +19,7 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 var vectorDefaults = VectorsConfig.defaults();
                 var trackerDefaults = TrackerConfig.defaults();
                 check(!PlayerTrackerHud.shouldRender(mc,trackerDefaults), "Tracker should require the List Players key by default");
-                var trackerVisible=new TrackerConfig(3,true,trackerDefaults.radius(),trackerDefaults.opacity(),trackerDefaults.iconSize(),false,trackerDefaults.displayMode(),false,trackerDefaults.distanceScalingStrength(),trackerDefaults.showDistance(),trackerDefaults.hideDistantPlayers(),trackerDefaults.hideStartDistance(),trackerDefaults.maxVisiblePlayers());
+                var trackerVisible=new TrackerConfig(4,true,trackerDefaults.radius(),trackerDefaults.opacity(),trackerDefaults.iconSize(),false,trackerDefaults.displayMode(),false,trackerDefaults.distanceScalingStrength(),trackerDefaults.showDistance(),trackerDefaults.hideDistantPlayers(),trackerDefaults.hideStartDistance(),trackerDefaults.maxVisiblePlayers(),trackerDefaults.placement(),trackerDefaults.nearFadeDistance());
                 check(PlayerTrackerHud.shouldRender(mc,trackerVisible), "Tracker should render during normal play when the key restriction is off");
                 mc.gui.hud.toggle();check(!PlayerTrackerHud.shouldRender(mc,trackerVisible), "F1 must hide tracker");mc.gui.hud.toggle();
                 mc.gui.setScreen(new SettingsScreen(null));check(!PlayerTrackerHud.shouldRender(mc,trackerVisible), "Menus must hide tracker");mc.gui.setScreen(null);
