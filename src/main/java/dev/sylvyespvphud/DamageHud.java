@@ -35,6 +35,7 @@ public final class DamageHud {
     private static ChargeSnapshot recentCharge;
     private static JabSnapshot recentJab;
     private static final DamageDeathMarkers deadPlayers=new DamageDeathMarkers();
+    private static boolean localPlayerDead;
     private DamageHud() {}
     private static final class Pending {
         final LivingEntity target; final float before; final double blocks, amount; final boolean calculated, critical, resetsFallDistance;
@@ -118,7 +119,12 @@ public final class DamageHud {
     public static void entityEvent(Entity entity,byte event){if(event==35){Pending p=pending.get(entity.getId());if(p!=null)p.totem=true;}if(event==3&&entity instanceof Player player)playerDied(player.getUUID());}
     static void playerDied(java.util.UUID id){deadPlayers.mark(id);CumulativeDamageTracker.fade(id);}
     public static void tick(Minecraft mc){
-        if(mc.level!=level||mc.player==null||!mc.player.isAlive()){level=mc.level;pending.clear();spearContacts.clear();recentCharge=null;recentJab=null;displayTicks=0;hit="";CumulativeDamageTracker.resetAll();deadPlayers.clear();return;}
+        if(mc.level!=level||mc.player==null){level=mc.level;pending.clear();spearContacts.clear();recentCharge=null;recentJab=null;displayTicks=0;hit="";CumulativeDamageTracker.resetAll();deadPlayers.clear();localPlayerDead=false;return;}
+        if(!mc.player.isAlive()||mc.player.isDeadOrDying()){
+            if(!localPlayerDead){pending.clear();spearContacts.clear();recentCharge=null;recentJab=null;displayTicks=0;hit="";CumulativeDamageTracker.resetAll(true);deadPlayers.clear();localPlayerDead=true;}
+            CumulativeDamageTracker.tick();return;
+        }
+        localPlayerDead=false;
         if(displayTicks>0)displayTicks--;
         CumulativeDamageTracker.tick();
         for(Player player:mc.level.players())if(!player.isAlive()||player.isDeadOrDying())playerDied(player.getUUID());

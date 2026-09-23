@@ -93,4 +93,11 @@ class CumulativeDamageTrackerTest {
         DamageHud.recordTrackerHit(active,"Active",2,200,100,true,false);
         assertFalse(DamageHud.deathMarked(active));assertEquals(6,CumulativeDamageTracker.total(active));assertEquals(1,CumulativeDamageTracker.opacity());
     }
+
+    @Test void localDeathClearsStoredTimerAndFadesSnapshot(){
+        UUID id=UUID.randomUUID();CumulativeDamageTracker.record(id,"Player",6,200,100,true);
+        CumulativeDamageTracker.resetAll(true);
+        assertEquals(0,CumulativeDamageTracker.total(id));assertEquals("6.0",CumulativeDamageTracker.visible("{damage}"));assertEquals(1,CumulativeDamageTracker.opacity());
+        CumulativeDamageTracker.tick();assertEquals(.95,CumulativeDamageTracker.opacity(),1e-9);
+    }
 }
