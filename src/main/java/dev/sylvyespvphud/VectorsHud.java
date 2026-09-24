@@ -4,6 +4,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 public final class VectorsHud {
@@ -21,16 +22,21 @@ public final class VectorsHud {
     static boolean activityAllowed(Player player,VectorsConfig c) {
         return activityAllowed(c,player.isFallFlying(),player.isUsingItem()&&player.getUseItem().is(ItemTags.SPEARS));
     }
+    private static Entity movementSource(Player player) {
+        return player.getVehicle()==null ? player : player.getVehicle();
+    }
     static void tick(Minecraft mc) {
         var c=SylvyesPvPHud.VECTORS_CONFIG.current();
         if(!shouldRender(mc,c)||!c.reticleEnabled()||!activityAllowed(mc.player,c)) { SMOOTHER.reset();return; }
-        var velocity=VectorsMath.effectiveVelocity(mc.player.getDeltaMovement(),mc.player.onGround());
+        var source=movementSource(mc.player);
+        var velocity=VectorsMath.effectiveVelocity(source.getDeltaMovement(),source.onGround());
         if(VectorsMath.stationary(velocity,c.stationaryThreshold())) { SMOOTHER.reset();return; }
-        SMOOTHER.sample(velocity,mc.player.onGround(),mc.player,mc.level);
+        SMOOTHER.sample(velocity,source.onGround(),source,mc.level);
     }
     public static void extract(GuiGraphicsExtractor g, DeltaTracker delta) {
         var mc=Minecraft.getInstance();var c=SylvyesPvPHud.VECTORS_CONFIG.current();if(!shouldRender(mc,c)){SMOOTHER.reset();return;}
-        var velocity=VectorsMath.effectiveVelocity(mc.player.getDeltaMovement(),mc.player.onGround());
+        var source=movementSource(mc.player);
+        var velocity=VectorsMath.effectiveVelocity(source.getDeltaMovement(),source.onGround());
         double magnitude=VectorsMath.magnitude(velocity);
         boolean activity=activityAllowed(mc.player,c);
         boolean reticleActive=c.reticleEnabled()&&activity&&!VectorsMath.stationary(velocity,c.stationaryThreshold());
