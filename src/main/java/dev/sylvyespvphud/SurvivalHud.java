@@ -15,6 +15,7 @@ public final class SurvivalHud {
         // Recheck while inventory screens are open, and after pickups, drops or totem use.
         // This also initializes correctly when joining with an existing inventory.
         SurvivalAudio.tick(mc);
+        RepotHud.tick(mc);
         available = new SurvivalItems.Availability(false, false, false);
         if (mc.player == null || mc.level == null || !mc.player.isAlive()) { lastVitals = Float.NaN; damageEffectTicks = 0; return; }
         float vitals = mc.player.getHealth() + mc.player.getAbsorptionAmount();
@@ -30,6 +31,7 @@ public final class SurvivalHud {
                 || !p.isAlive() || p.isSpectator()) return;
         var c = SylvyesPvPHud.SURVIVAL_CONFIG.current();
         if (!c.enabled()) return;
+        RepotHud.extract(g);
         if (c.damageIndicatorEnabled() && damageEffectTicks > 0) drawDamageIndicator(g, c);
         if (c.retotemEnabled() && SurvivalState.needsRetotem(available.totem(), p.getOffhandItem().isEmpty()))
             HudRenderer.text(g, c.retotemText(), SylvyesPvPHud.HUD_CONFIG.current().retotem(), 0);

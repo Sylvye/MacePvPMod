@@ -62,6 +62,25 @@ public final class SurvivalConfigStore {
                         }
                         merged.add(entry.getKey(), value); continue;
                     }
+                    if (entry.getKey().equals("repot")) {
+                        if (!value.isJsonObject()) throw new JsonParseException("Invalid repot settings");
+                        JsonObject settings = merged.getAsJsonObject("repot");
+                        for (var setting : value.getAsJsonObject().entrySet()) {
+                            if (!settings.has(setting.getKey())) continue;
+                            JsonElement expected = settings.get(setting.getKey()), actual = setting.getValue();
+                            if (expected.isJsonArray()) {
+                                if (!actual.isJsonArray()) throw new JsonParseException("Invalid repot effects");
+                                for (var effect : actual.getAsJsonArray())
+                                    if (!effect.isJsonPrimitive() || !effect.getAsJsonPrimitive().isString()) throw new JsonParseException("Invalid effect ID");
+                            } else {
+                                if (!actual.isJsonPrimitive()) throw new JsonParseException("Invalid repot setting");
+                                var a = actual.getAsJsonPrimitive(); var e = expected.getAsJsonPrimitive();
+                                if (a.isBoolean() != e.isBoolean() || a.isNumber() != e.isNumber()) throw new JsonParseException("Invalid repot setting type");
+                            }
+                            settings.add(setting.getKey(), actual);
+                        }
+                        continue;
+                    }
                     JsonPrimitive expected = merged.getAsJsonPrimitive(entry.getKey());
                     if (!value.isJsonPrimitive()) throw new JsonParseException("Invalid " + entry.getKey());
                     JsonPrimitive actual = value.getAsJsonPrimitive();

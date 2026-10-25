@@ -28,6 +28,7 @@ public record ProfileSettings(PitchConfig pitch, DamageConfig damage, AttributeS
 
     void activate() {
         ProfileSettings valid = validated();
+        RepotHud.reset();
         SylvyesPvPHud.CONFIG.activate(valid.pitch());
         SylvyesPvPHud.DAMAGE_CONFIG.activate(valid.damage());
         SylvyesPvPHud.ATTRIBUTE_SWAP_CONFIG.activate(valid.attributeSwaps());

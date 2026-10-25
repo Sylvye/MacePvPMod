@@ -5,7 +5,15 @@ public record SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean 
         String healthText, int healthColor, String saturationText, int saturationColor,
         String combinedText, int combinedColor, double healingSize, double healingX, double healingY,
         double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval, java.util.List<SurvivalItemRule> healingItems, java.util.List<SurvivalItemRule> saturationItems, java.util.List<SoundEntry> sounds,
+        boolean damageIndicatorEnabled, int damageIndicatorThickness, double damageIndicatorOpacity, int damageIndicatorColor, boolean enabled, RepotConfig repot) {
+    public SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean healingEnabled,
+        String retotemText, int retotemColor, double retotemSize, double retotemX, double retotemY,
+        String healthText, int healthColor, String saturationText, int saturationColor,
+        String combinedText, int combinedColor, double healingSize, double healingX, double healingY,
+        double healthPercent, double saturationThreshold, double harpVolume, double bassVolume, double harpPitch, double bassPitch, double audioStartInterval, double audioEndInterval, java.util.List<SurvivalItemRule> healingItems, java.util.List<SurvivalItemRule> saturationItems, java.util.List<SoundEntry> sounds,
         boolean damageIndicatorEnabled, int damageIndicatorThickness, double damageIndicatorOpacity, int damageIndicatorColor, boolean enabled) {
+        this(schemaVersion, retotemEnabled, healingEnabled, retotemText, retotemColor, retotemSize, retotemX, retotemY, healthText, healthColor, saturationText, saturationColor, combinedText, combinedColor, healingSize, healingX, healingY, healthPercent, saturationThreshold, harpVolume, bassVolume, harpPitch, bassPitch, audioStartInterval, audioEndInterval, healingItems, saturationItems, sounds, damageIndicatorEnabled, damageIndicatorThickness, damageIndicatorOpacity, damageIndicatorColor, enabled, RepotConfig.defaults());
+    }
     public SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean healingEnabled,
         String retotemText, int retotemColor, double retotemSize, double retotemX, double retotemY,
         String healthText, int healthColor, String saturationText, int saturationColor,
@@ -42,7 +50,7 @@ public record SurvivalConfig(int schemaVersion, boolean retotemEnabled, boolean 
                 SurvivalItemRule.validated(saturationItems, SurvivalItemRule.saturationDefaults()),
                 sounds == null ? SoundEntry.legacy(harpVolume, bassVolume, harpPitch, bassPitch) : sounds.stream().filter(java.util.Objects::nonNull).map(SoundEntry::validated).toList(),
                 damageIndicatorEnabled, Math.max(1, Math.min(80, damageIndicatorThickness)),
-                clamp(damageIndicatorOpacity, 0.01, 1, .22), damageIndicatorColor & 0xffffff, enabled);
+                clamp(damageIndicatorOpacity, 0.01, 1, .22), damageIndicatorColor & 0xffffff, enabled, repot == null ? RepotConfig.defaults() : repot.validated());
     }
     private static String text(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value.substring(0, Math.min(80, value.length()));

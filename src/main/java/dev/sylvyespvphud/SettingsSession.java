@@ -76,6 +76,7 @@ final class SettingsSession {
     void damage(String field,Object value){damage=with(damage,field,value);}
     void swap(String field,Object value){swap=with(swap,field,value);}
     void survival(String field,Object value){survival=with(survival,field,value);}
+    void repot(String field,Object value){survival("repot",with(survival.repot(),field,value));}
     void reach(String field,Object value){reach=with(reach,field,value);}
     void vectors(String field,Object value){vectors=with(vectors,field,value);}
     void tracker(String field,Object value){tracker=with(tracker,field,value);}
@@ -107,6 +108,6 @@ final class SettingsSession {
     }
     private SurvivalConfig copySurvival(boolean enabled) { return copySurvival(survival,enabled); }
     private SurvivalConfig copySurvival(SurvivalConfig s,boolean enabled) {
-        return new SurvivalConfig(2,s.retotemEnabled(),s.healingEnabled(),s.retotemText(),s.retotemColor(),s.retotemSize(),s.retotemX(),s.retotemY(),s.healthText(),s.healthColor(),s.saturationText(),s.saturationColor(),s.combinedText(),s.combinedColor(),s.healingSize(),s.healingX(),s.healingY(),s.healthPercent(),s.saturationThreshold(),s.harpVolume(),s.bassVolume(),s.harpPitch(),s.bassPitch(),s.audioStartInterval(),s.audioEndInterval(),s.healingItems(),s.saturationItems(),s.sounds(),s.damageIndicatorEnabled(),s.damageIndicatorThickness(),s.damageIndicatorOpacity(),s.damageIndicatorColor(),enabled);
+        return new SurvivalConfig(2,s.retotemEnabled(),s.healingEnabled(),s.retotemText(),s.retotemColor(),s.retotemSize(),s.retotemX(),s.retotemY(),s.healthText(),s.healthColor(),s.saturationText(),s.saturationColor(),s.combinedText(),s.combinedColor(),s.healingSize(),s.healingX(),s.healingY(),s.healthPercent(),s.saturationThreshold(),s.harpVolume(),s.bassVolume(),s.harpPitch(),s.bassPitch(),s.audioStartInterval(),s.audioEndInterval(),s.healingItems(),s.saturationItems(),s.sounds(),s.damageIndicatorEnabled(),s.damageIndicatorThickness(),s.damageIndicatorOpacity(),s.damageIndicatorColor(),enabled,s.repot());
     }
 }

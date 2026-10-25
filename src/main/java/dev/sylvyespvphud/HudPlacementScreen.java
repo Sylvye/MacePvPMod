@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 
 /** Scaled full-screen HUD canvas sharing the parent workspace's unsaved draft. */
 final class HudPlacementScreen extends Screen {
-    private static final String[] NAMES={"Pitch bar","Fall distance","Hit damage","Retotem","Healing","Attribute swap","Velocity","Damage total"};
+    private static final String[] NAMES={"Pitch bar","Fall distance","Hit damage","Retotem","Healing","Attribute swap","Velocity","Damage total","Repot warning"};
     private final SettingsScreen parent;private final SettingsSession draft;private final int selected;
     private int panelW,canvasX,canvasY,canvasW,canvasH;private double zoom,originX,originY;
     private HudRenderer.Bounds selectedBounds;private boolean dragging,resizing;

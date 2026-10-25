@@ -13,6 +13,11 @@ final class HudPreview {
             HudStyle shown=muted?colors(style,gray,gray,gray,.35):style;
             return HudRenderer.pitch(g,shown,draft.pitch,draft.pitch.targetPitch(),viewportW,viewportH);
         }
+        if(element==8) {
+            var config=draft.survival.repot();
+            var effects=config.effects().isEmpty()?RepotConfig.defaults().effects():config.effects();
+            return RepotHud.render(g,config,effects,style,viewportW,viewportH,muted);
+        }
         String text=switch(element) {
             case 1->DamageText.format(draft.damage.fallTemplate(),12.5,18);
             case 2->DamageText.format(draft.damage.hitTemplate(),12.5,18);
