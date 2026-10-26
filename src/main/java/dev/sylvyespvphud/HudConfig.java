@@ -1,12 +1,16 @@
 package dev.sylvyespvphud;
-public record HudConfig(int schemaVersion, HudStyle pitch, HudStyle fall, HudStyle hit, HudStyle retotem, HudStyle healing, HudStyle attributeSwap, HudStyle velocity, HudStyle damageTracker, HudStyle repot) {
+public record HudConfig(int schemaVersion, HudStyle pitch, HudStyle fall, HudStyle hit, HudStyle retotem, HudStyle healing, HudStyle attributeSwap, HudStyle velocity, HudStyle damageTracker, HudStyle repot, HudStyle shieldTracker) {
+    public HudConfig(int schemaVersion, HudStyle pitch, HudStyle fall, HudStyle hit, HudStyle retotem, HudStyle healing, HudStyle attributeSwap, HudStyle velocity, HudStyle damageTracker, HudStyle repot) {
+        this(schemaVersion,pitch,fall,hit,retotem,healing,attributeSwap,velocity,damageTracker,repot,shieldTrackerDefault());
+    }
     public HudConfig(int schemaVersion, HudStyle pitch, HudStyle fall, HudStyle hit, HudStyle retotem, HudStyle healing, HudStyle attributeSwap, HudStyle velocity, HudStyle damageTracker) {
         this(schemaVersion,pitch,fall,hit,retotem,healing,attributeSwap,velocity,damageTracker,repotDefault());
     }
     public HudConfig validated() {
         if(schemaVersion != 1 || pitch==null || fall==null || hit==null || retotem==null || healing==null) throw new IllegalArgumentException("Invalid HUD configuration");
-        return new HudConfig(1,pitch.validated(),fall.validated(),hit.validated(),retotem.validated(),healing.validated(),attributeSwap == null ? attributeSwapDefault() : attributeSwap.validated(),velocity == null ? velocityDefault() : velocity.validated(),damageTracker==null?damageTrackerDefault():damageTracker.validated(),repot==null?repotDefault():repot.validated());
+        return new HudConfig(1,pitch.validated(),fall.validated(),hit.validated(),retotem.validated(),healing.validated(),attributeSwap == null ? attributeSwapDefault() : attributeSwap.validated(),velocity == null ? velocityDefault() : velocity.validated(),damageTracker==null?damageTrackerDefault():damageTracker.validated(),repot==null?repotDefault():repot.validated(),shieldTracker==null?shieldTrackerDefault():shieldTracker.validated());
     }
+    static HudStyle shieldTrackerDefault(){return HudStyle.text(.5,.5,0,0,52,1,0xffffff);}
     static HudStyle repotDefault() { return HudStyle.text(.5,.26,0,0,0,1,0xffff55); }
     static HudStyle attributeSwapDefault() { return HudStyle.text(.5,1,0,0,-68,1,0xffffff); }
     static HudStyle velocityDefault() { return HudStyle.text(.5,.5,0,0,48,1,0xffffff); }
@@ -18,6 +22,6 @@ public record HudConfig(int schemaVersion, HudStyle pitch, HudStyle fall, HudSty
             HudStyle.text(s.retotemX()/100,s.retotemY()/100,s.retotemY()/100,0,0,s.retotemSize(),s.retotemColor()),
             new HudStyle(s.healingX()/100,s.healingY()/100,s.healingX()/100,s.healingY()/100,0,0,s.healingSize(),s.healthColor(),s.saturationColor(),s.combinedColor(),100,1,1),attributeSwapDefault(),velocityDefault(),damageTrackerDefault());
     }
-    HudStyle get(int i) { return switch(i) {case 0->pitch;case 1->fall;case 2->hit;case 3->retotem;case 4->healing;case 5->attributeSwap;case 6->velocity;case 7->damageTracker;case 8->repot;default->throw new IllegalArgumentException("Unknown HUD element");}; }
-    HudConfig with(int i,HudStyle s) { return new HudConfig(1,i==0?s:pitch,i==1?s:fall,i==2?s:hit,i==3?s:retotem,i==4?s:healing,i==5?s:attributeSwap,i==6?s:velocity,i==7?s:damageTracker,i==8?s:repot); }
+    HudStyle get(int i) { return switch(i) {case 0->pitch;case 1->fall;case 2->hit;case 3->retotem;case 4->healing;case 5->attributeSwap;case 6->velocity;case 7->damageTracker;case 8->repot;case 9->shieldTracker;default->throw new IllegalArgumentException("Unknown HUD element");}; }
+    HudConfig with(int i,HudStyle s) { return new HudConfig(1,i==0?s:pitch,i==1?s:fall,i==2?s:hit,i==3?s:retotem,i==4?s:healing,i==5?s:attributeSwap,i==6?s:velocity,i==7?s:damageTracker,i==8?s:repot,i==9?s:shieldTracker); }
 }

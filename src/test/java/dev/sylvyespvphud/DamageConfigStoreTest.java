@@ -7,6 +7,29 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DamageConfigStoreTest {
     @TempDir Path directory;
+    @Test void shieldSettingsDefaultOffAndRoundTripWithProfiles() throws Exception {
+        var file=directory.resolve("shields.json");
+        Files.writeString(file,"{\"shieldTrackerEnabled\":true,\"hitShieldEnabled\":true,\"shieldTrackerTemplate\":\"{player} shield: {damage}\",\"hitShieldTemplate\":\"Blocked {damage}\"}");
+        var store=new DamageConfigStore(file);store.load();
+        assertTrue(store.current().shieldTrackerEnabled());assertTrue(store.current().hitShieldEnabled());
+        store.save(store.current());var loaded=new DamageConfigStore(file);loaded.load();assertEquals(store.current(),loaded.current());
+        var d=ProfileSettings.defaults();
+        var hud=d.hud().with(9,d.hud().shieldTracker().edit(73,91,1.4,0x123456,0,0,100,1,.6));
+        var settings=new ProfileSettings(d.pitch(),loaded.current(),d.attributeSwaps(),d.survival(),hud,d.reachOutlines(),d.vectors(),d.playerTracker());
+        var profile=new SettingsProfile(java.util.UUID.randomUUID().toString(),"Shields",java.util.List.of(),settings);
+        assertEquals(settings,ProfileClipboard.decode(ProfileClipboard.encode(profile)).settings());
+        assertEquals(settings,ProfileClipboard.decode(ProfileClipboard.encodeAscii(profile)).settings());
+        assertFalse(DamageConfig.defaults().shieldTrackerEnabled());assertFalse(DamageConfig.defaults().hitShieldEnabled());
+        var oldHud=new com.google.gson.Gson().toJsonTree(hud).getAsJsonObject();oldHud.remove("shieldTracker");
+        assertEquals(HudConfig.shieldTrackerDefault(),new com.google.gson.Gson().fromJson(oldHud,HudConfig.class).validated().shieldTracker());
+    }
+    @Test void invalidShieldTemplatesFallBack() throws Exception {
+        var file=directory.resolve("invalid-templates.json");
+        Files.writeString(file,"{\"shieldTrackerTemplate\":\"{unknown}\",\"hitShieldTemplate\":\"{player}\"}");
+        var store=new DamageConfigStore(file);store.load();
+        assertEquals(DamageConfig.defaults().shieldTrackerTemplate(),store.current().shieldTrackerTemplate());
+        assertEquals(DamageConfig.defaults().hitShieldTemplate(),store.current().hitShieldTemplate());
+    }
     @Test void independentFeaturesRoundTrip() throws Exception {
         var file = directory.resolve("damage.json");
         var config = new DamageConfig(1, false, 0x112233, .7, -70, 40, true, 0xabcdef, 2, 50, -90, 6, true);
@@ -18,6 +41,7 @@ class DamageConfigStoreTest {
         var file = directory.resolve("damage.json");
         Files.writeString(file, "{\"fallEnabled\":false,\"hitSize\":999,\"hitSeconds\":0}");
         var store = new DamageConfigStore(file); store.load();
+        assertFalse(store.current().shieldTrackerEnabled());assertFalse(store.current().hitShieldEnabled());
         assertFalse(store.current().calculatedDamage());
         assertFalse(store.current().fallEnabled()); assertTrue(store.current().hitEnabled());
         assertEquals(14, store.current().fallY()); assertEquals(4, store.current().hitSize()); assertEquals(1, store.current().hitSeconds());

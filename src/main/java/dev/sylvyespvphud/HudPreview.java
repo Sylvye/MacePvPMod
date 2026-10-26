@@ -26,6 +26,7 @@ final class HudPreview {
             case 5->AttributeSwaps.HUD_TEXT;
             case 6->VectorsText.format(draft.vectors.velocityTemplate(),12.5);
             case 7->CumulativeDamageText.format(draft.damage.trackerTemplate(),"Opponent",42.5);
+            case 9->CumulativeDamageText.format(draft.damage.shieldTrackerTemplate(),"Opponent",42.5);
             default->"";
         };
         int color=switch(element) {

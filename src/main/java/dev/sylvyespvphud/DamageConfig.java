@@ -5,7 +5,16 @@ public record DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor
         ColorScale fallColors, ColorScale hitColors, boolean maceEnabled, boolean spearEnabled,
         boolean swordAxeEnabled, boolean useEnemyGear, boolean boldCriticalDamage, boolean enabled,
         boolean trackerEnabled, int trackerSeconds, String trackerTemplate,
+        int trackerHudSeconds, boolean trackerHudAlwaysVisible,
+        boolean shieldTrackerEnabled, String shieldTrackerTemplate, boolean hitShieldEnabled, String hitShieldTemplate) {
+    public DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor, double fallSize,
+        int fallX, int fallY, boolean hitEnabled, int hitColor, double hitSize, int hitX, int hitY, int hitSeconds, boolean calculatedDamage, String fallTemplate, String hitTemplate, double fallThreshold,
+        ColorScale fallColors, ColorScale hitColors, boolean maceEnabled, boolean spearEnabled,
+        boolean swordAxeEnabled, boolean useEnemyGear, boolean boldCriticalDamage, boolean enabled,
+        boolean trackerEnabled, int trackerSeconds, String trackerTemplate,
         int trackerHudSeconds, boolean trackerHudAlwaysVisible) {
+        this(schemaVersion,fallEnabled,fallColor,fallSize,fallX,fallY,hitEnabled,hitColor,hitSize,hitX,hitY,hitSeconds,calculatedDamage,fallTemplate,hitTemplate,fallThreshold,fallColors,hitColors,maceEnabled,spearEnabled,swordAxeEnabled,useEnemyGear,boldCriticalDamage,enabled,trackerEnabled,trackerSeconds,trackerTemplate,trackerHudSeconds,trackerHudAlwaysVisible,false,"{player}: {damage} shield damage",false,"{damage} shield damage");
+    }
     private static final String DEFAULT_TRACKER_TEMPLATE="{player}: {damage} total damage";
     public ColorScale effectiveHitColors() {
         return useEnemyGear ? hitColors.withDomain(0,20) : hitColors;
@@ -67,9 +76,10 @@ public record DamageConfig(int schemaVersion, boolean fallEnabled, int fallColor
                 clamp(hitColor, 0, 0xffffff), size(hitSize), clamp(hitX, -2000, 2000), clamp(hitY, -2000, 2000), clamp(hitSeconds, 1, 10), calculatedDamage, template(fallTemplate, false), template(hitTemplate, true), threshold(fallThreshold),
                 (fallColors==null?ColorScale.flat(0xffffff):fallColors).validated(),(hitColors==null?ColorScale.damageDefault():hitColors).validated(),
                 maceEnabled, spearEnabled, swordAxeEnabled, useEnemyGear, boldCriticalDamage, enabled,
-                trackerEnabled,clamp(trackerSeconds,1,300),trackerTemplate(trackerTemplate),clamp(trackerHudSeconds,1,300),trackerHudAlwaysVisible);
+                trackerEnabled,clamp(trackerSeconds,1,300),trackerTemplate(trackerTemplate),clamp(trackerHudSeconds,1,300),trackerHudAlwaysVisible,shieldTrackerEnabled,shieldTemplate(shieldTrackerTemplate,true),hitShieldEnabled,shieldTemplate(hitShieldTemplate,false));
     }
     private static String template(String s, boolean hit) { return DamageText.error(s, hit).isEmpty() && s.length() <= 160 ? s : hit ? "{damage} damage" : "{blocks} blocks"; }
+    private static String shieldTemplate(String s,boolean tracker){return s!=null&&s.length()<=160&&(tracker?CumulativeDamageText.error(s):DamageText.error(s,true)).isEmpty()?s:tracker?"{player}: {damage} shield damage":"{damage} shield damage";}
     private static String trackerTemplate(String s){return s!=null&&s.length()<=160&&CumulativeDamageText.error(s).isEmpty()?s:DEFAULT_TRACKER_TEMPLATE;}
     private static int clamp(int n, int min, int max) { return Math.max(min, Math.min(max, n)); }
     private static double size(double n) { return Double.isFinite(n) ? Math.max(.5, Math.min(4, n)) : 1; }

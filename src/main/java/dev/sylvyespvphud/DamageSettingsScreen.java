@@ -7,10 +7,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 public final class DamageSettingsScreen extends Screen {
     private final Screen parent;private final DamageConfig original;
-    private boolean fall,hit,calculated,mace,spear,swordAxe,useGear,boldCritical;private double fallThreshold;private int seconds;private String fallText,hitText,error="";private Button save;private ColorScale fallColors,hitColors;
+    private boolean fall,hit,calculated,mace,spear,swordAxe,useGear,boldCritical,hitShield,shieldTracker;private double fallThreshold;private int seconds;private String fallText,hitText,shieldText,shieldTrackerText,error="";private Button save;private ColorScale fallColors,hitColors;
     public DamageSettingsScreen(Screen parent){super(Component.literal("Damage Counter"));this.parent=parent;original=SylvyesPvPHud.DAMAGE_CONFIG.current();read(original);}
-    private void read(DamageConfig c){fall=c.fallEnabled();hit=c.hitEnabled();calculated=c.calculatedDamage();mace=c.maceEnabled();spear=c.spearEnabled();swordAxe=c.swordAxeEnabled();useGear=c.useEnemyGear();boldCritical=c.boldCriticalDamage();fallThreshold=c.fallThreshold();seconds=c.hitSeconds();fallText=c.fallTemplate();hitText=c.hitTemplate();fallColors=c.fallColors();hitColors=c.hitColors();}
-    private String validation(){String e=DamageText.error(fallText,false);return e.isEmpty()?DamageText.error(hitText,true):e;}
+    private void read(DamageConfig c){fall=c.fallEnabled();hit=c.hitEnabled();calculated=c.calculatedDamage();mace=c.maceEnabled();spear=c.spearEnabled();swordAxe=c.swordAxeEnabled();useGear=c.useEnemyGear();boldCritical=c.boldCriticalDamage();fallThreshold=c.fallThreshold();seconds=c.hitSeconds();fallText=c.fallTemplate();hitText=c.hitTemplate();fallColors=c.fallColors();hitColors=c.hitColors();hitShield=c.hitShieldEnabled();shieldTracker=c.shieldTrackerEnabled();shieldText=c.hitShieldTemplate();shieldTrackerText=c.shieldTrackerTemplate();}
+    private String validation(){String e=DamageText.error(fallText,false);if(e.isEmpty())e=DamageText.error(hitText,true);if(e.isEmpty())e=DamageText.error(shieldText,true);return e.isEmpty()?CumulativeDamageText.error(shieldTrackerText):e;}
     protected void init(){int w=Math.min(420,width-32);var rows=LinearLayout.vertical().spacing(6);
         rows.addChild(Button.builder(Component.literal("Fall distance: "+(fall?"On":"Off")),b->{fall=!fall;rebuildWidgets();}).bounds(0,0,w,20).build());
         rows.addChild(SettingsControls.slider("Fall threshold (blocks)",fallThreshold,0,20,.1,w,v->fallThreshold=v));
@@ -21,6 +21,11 @@ public final class DamageSettingsScreen extends Screen {
         rows.addChild(Button.builder(Component.literal("Spear: "+(spear?"On":"Off")),b->{spear=!spear;rebuildWidgets();}).bounds(0,0,w,20).tooltip(Tooltip.create(Component.literal("Includes movement-based spear charge damage."))).build());
         rows.addChild(Button.builder(Component.literal("Sword & axe: "+(swordAxe?"On":"Off")),b->{swordAxe=!swordAxe;rebuildWidgets();}).bounds(0,0,w,20).build());
         rows.addChild(Button.builder(Component.literal("Bold critical damage: "+(boldCritical?"On":"Off")),b->{boldCritical=!boldCritical;rebuildWidgets();}).bounds(0,0,w,20).tooltip(Tooltip.create(Component.literal("Bolds only confirmed vanilla critical hits; falling alone and spear hits do not count."))).build());
+        rows.addChild(Button.builder(Component.literal("Include shield damage: "+(hitShield?"On":"Off")),b->{hitShield=!hitShield;rebuildWidgets();}).bounds(0,0,w,20).tooltip(Tooltip.create(Component.literal("Reported uses actual durability loss, with a calculated fallback after 2 seconds. Calculated + Use enemy gear averages visible Unbreaking."))).build());
+        shieldTemplate(rows,false,w);
+        rows.addChild(Button.builder(Component.literal("Show shield total: "+(shieldTracker?"On":"Off")),b->{shieldTracker=!shieldTracker;rebuildWidgets();}).bounds(0,0,w,20).build());
+        shieldTemplate(rows,true,w);
+        rows.addChild(Button.builder(Component.literal("Edit shield tracker appearance"),b->minecraft.gui.setScreen(new HudSettingsScreen(this,9))).bounds(0,0,w,20).build());
         template(rows,true,w);
         rows.addChild(Button.builder(Component.literal("Hit colors: "+mode(hitColors)+(useGear?" (0–20 with gear)":"")),b->minecraft.gui.setScreen(new ColorScaleEditorScreen(this,"Hit damage",hitColors,useGear,c->{hitColors=c;rebuildWidgets();}))).bounds(0,0,w,20).build());
         rows.addChild(SettingsControls.slider("Hit seconds",seconds,1,10,1,w,v->seconds=(int)v));
@@ -29,7 +34,7 @@ public final class DamageSettingsScreen extends Screen {
         rows.addChild(Button.builder(Component.literal("Edit appearance in HUD"),b->minecraft.gui.setScreen(new HudSettingsScreen(this,1))).bounds(0,0,w,20).build());
         rows.addChild(Button.builder(Component.literal("Reset defaults"),b->{read(DamageConfig.defaults());rebuildWidgets();}).bounds(0,0,w,20).build());
         var scroll=new ScrollableLayout(minecraft,rows,Math.max(40,height-78));scroll.setMinWidth(w);scroll.arrangeElements();scroll.setX((width-scroll.getWidth())/2);scroll.setY(30);scroll.visitWidgets(this::addRenderableWidget);
-        save=addRenderableWidget(Button.builder(Component.literal("Save"),b->{try{SylvyesPvPHud.DAMAGE_CONFIG.save(new DamageConfig(2,fall,original.fallColor(),original.fallSize(),original.fallX(),original.fallY(),hit,original.hitColor(),original.hitSize(),original.hitX(),original.hitY(),seconds,calculated,fallText,hitText,fallThreshold,fallColors,hitColors,mace,spear,swordAxe,useGear,boldCritical,original.enabled(),original.trackerEnabled(),original.trackerSeconds(),original.trackerTemplate(),original.trackerHudSeconds(),original.trackerHudAlwaysVisible()));onClose();}catch(IOException e){error="Could not save settings.";}}).bounds(width/2-104,height-26,100,20).build());save.active=validation().isEmpty();
+        save=addRenderableWidget(Button.builder(Component.literal("Save"),b->{try{SylvyesPvPHud.DAMAGE_CONFIG.save(new DamageConfig(2,fall,original.fallColor(),original.fallSize(),original.fallX(),original.fallY(),hit,original.hitColor(),original.hitSize(),original.hitX(),original.hitY(),seconds,calculated,fallText,hitText,fallThreshold,fallColors,hitColors,mace,spear,swordAxe,useGear,boldCritical,original.enabled(),original.trackerEnabled(),original.trackerSeconds(),original.trackerTemplate(),original.trackerHudSeconds(),original.trackerHudAlwaysVisible(),shieldTracker,shieldTrackerText,hitShield,shieldText));onClose();}catch(IOException e){error="Could not save settings.";}}).bounds(width/2-104,height-26,100,20).build());save.active=validation().isEmpty();
         addRenderableWidget(Button.builder(Component.literal("Cancel"),b->onClose()).bounds(width/2+4,height-26,100,20).build());
     }
     private static String mode(ColorScale scale){return scale.mode()==ColorMode.FLAT?"Flat":"Gradient";}
@@ -41,6 +46,12 @@ public final class DamageSettingsScreen extends Screen {
         var buttons=LinearLayout.horizontal().spacing(4);
         buttons.addChild(Button.builder(Component.literal("Insert {blocks}"),b->box.insertText("{blocks}")).bounds(0,0,(w-4)/2,20).build());
         if(isHit)buttons.addChild(Button.builder(Component.literal("Insert {damage}"),b->box.insertText("{damage}")).bounds(0,0,(w-4)/2,20).build());rows.addChild(buttons);rows.addChild(preview);
+    }
+    private void shieldTemplate(LinearLayout rows,boolean tracker,int w){
+        rows.addChild(new StringWidget(Component.literal(tracker?"Shield total: {player}, {damage}":"Shield hit: {blocks}, {damage}"),font));
+        var box=new EditBox(font,0,0,w,20,Component.literal(tracker?"Shield tracker message":"Shield hit message"));
+        box.setMaxLength(160);box.setValue(tracker?shieldTrackerText:shieldText);
+        box.setResponder(v->{if(tracker)shieldTrackerText=v;else shieldText=v;if(save!=null)save.active=validation().isEmpty();});rows.addChild(box);
     }
     public void extractRenderState(GuiGraphicsExtractor g,int x,int y,float dt){super.extractRenderState(g,x,y,dt);g.centeredText(font,title,width/2,12,0xffffffff);g.centeredText(font,validation().isEmpty()?error:validation(),width/2,height-40,0xffff7777);}
     public void onClose(){minecraft.gui.setScreen(parent);}

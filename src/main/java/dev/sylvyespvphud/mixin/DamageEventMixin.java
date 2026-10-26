@@ -12,6 +12,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public abstract class DamageEventMixin {
+    @Inject(method = "handleSoundEvent", at = @At("TAIL"))
+    private void sylvyespvphud$blockSound(net.minecraft.network.protocol.game.ClientboundSoundPacket packet, CallbackInfo ci) {
+        dev.sylvyespvphud.ShieldDamageEvents.sound(packet);
+    }
+    @Inject(method = "handleSoundEntityEvent", at = @At("TAIL"))
+    private void sylvyespvphud$entityBlockSound(net.minecraft.network.protocol.game.ClientboundSoundEntityPacket packet, CallbackInfo ci) {
+        dev.sylvyespvphud.ShieldDamageEvents.sound(packet);
+    }
+    @Inject(method = "handleSetEquipment", at = @At("HEAD"))
+    private void sylvyespvphud$shieldEquipment(net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket packet, CallbackInfo ci) {
+        // This handler may first be called on the network thread. Only inspect world state on the client thread.
+        if(Minecraft.getInstance().isSameThread())dev.sylvyespvphud.ShieldDamageEvents.equipment(packet);
+    }
     @Inject(method = "handleMovePlayer", at = @At("TAIL"))
     private void sylvyespvphud$positionReset(net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
         var player = Minecraft.getInstance().player;

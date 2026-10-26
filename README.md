@@ -75,7 +75,7 @@ Strength, Weakness, custom attack attributes, and attribute swaps are included i
 
 **Bold critical damage** is enabled by default. It bolds damage only after a server-confirmed ordinary attack met every vanilla critical-hit condition at attack time. Falling alone is insufficient, and spear jabs and charges are never styled as critical hits.
 
-Shield blocking is estimated from the target's active blocking item, activation delay, facing, and damage-type rules at attack time, independently of **Use enemy gear**. Fully blocked estimates leave the hit counter and cumulative damage tracker unchanged, including their timers. Partial blocks reduce the estimate before armor. Spear confirmation fallback preserves the saved shield state. Reported mode still prefers observed positive health loss and uses the shield-adjusted estimate when falling back to calculation.
+Shield blocking is estimated from the target's active blocking item, activation delay, facing, and damage-type rules at attack time, independently of **Use enemy gear**. With shield tracking disabled, fully blocked estimates leave the hit counter and cumulative damage tracker unchanged, including their timers. Partial blocks reduce the estimate before armor. Spear confirmation fallback preserves the saved shield state. Reported mode still prefers observed positive health loss and uses the shield-adjusted estimate when falling back to calculation.
 
 **Use enemy gear** is available only in calculated mode. It estimates post-gear health damage using client-visible armor, toughness, Protection, and Breach. It intentionally excludes Resistance, absorption, server plugins, and equipment hidden from the client, so the result is a best-effort estimate. Shield predictions also depend on client-visible state and may differ from server decisions under latency or custom combat rules.
 
@@ -115,6 +115,16 @@ Detects an attribute-changing hotbar swap during combat and optionally shows an 
 - Text, thresholds, and timing remain here; colors, size, and placement live in **HUD**. Playlist **Done** returns a draft; save Survival instincts to apply it.
 
 These alerts are hidden while viewing menus, spectating, dead, paused, or hiding the HUD. Existing attribute-swap and survival files are imported into the initial profile.
+
+### Shield durability tracking
+
+In **Damage → Tracker**, **Show shield total** adds a separate HUD field with its own message, position, scale, color, and opacity. It tracks each player's shield total independently of health damage, sharing the existing tracker reset timeout and HUD visibility settings. It also works with **Show damage total** off.
+
+In **Damage → Hit Damage**, **Include shield damage** displays a running shield sum using its own message and the existing hit appearance and display duration. Each shield hit refreshes the sum and timer. A health hit, including a partial block, ends only that opponent's hit shield streak. Other opponents keep their sums until their own timeout.
+
+Both features default off and only count enabled mace attacks and spear jabs/charges. **Reported** adds the actual durability decrease received in shield equipment updates, including real Unbreaking rolls and server rules; armor and Use enemy gear do not modify this measurement. A confirmed block without a measurement waits up to 40 ticks (2 seconds) before using the saved calculated durability estimate. A later matching update corrects that provisional amount without extending timers or reviving an expired streak. Coalesced updates count their full observed decrease once. **Calculated** retains its vanilla durability estimate; **Calculated damage + Use enemy gear** applies average visible Unbreaking reduction. Lowering or swapping a shield preserves its opponent's sum. A confirmed shield break resets stored shield sums while retaining the final result for the normal display lifetime (or until replacement/reset when always visible). Death, disconnect, and module/feature disable clear relevant shield state. `/resetdamagetracker` clears both cumulative tracker fields.
+
+Fully blocked attacks have no attacker-tagged damage packet in vanilla. Shield tracking correlates recent local attacks with server block sounds, durability updates, and break events. Silent blocks entirely prevented by Unbreaking may have no observable confirmation; simultaneous attackers or server plugins can also make attribution uncertain. Reported measurements are exact item-durability deltas, but attribution can remain uncertain; fallback values and Calculated mode remain estimates.
 
 ## Build and test
 

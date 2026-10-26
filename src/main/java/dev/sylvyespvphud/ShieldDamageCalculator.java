@@ -5,13 +5,25 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.component.BlocksAttacks;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantments;
 
 /** The read-only part of LivingEntity.applyItemBlocking, captured before the server response. */
 final class ShieldDamageCalculator {
     private ShieldDamageCalculator() {}
 
-    record Snapshot(BlocksAttacks blocking, DamageSource source, double angle) {
-        static final Snapshot NONE = new Snapshot(null, null, 0);
+    record Snapshot(BlocksAttacks blocking, DamageSource source, double angle, ItemStack shield, boolean player) {
+        static final Snapshot NONE = new Snapshot(null, null, 0, ItemStack.EMPTY, false);
+
+        double durability(double damage, boolean useGear) {
+            if (!Double.isFinite(damage) || damage <= 0 || blocking == null || !player || !shield.isDamageableItem()) return 0;
+            double blocked = damage - remaining(damage);
+            if (blocked <= 0) return 0;
+            int cost = blocking.itemDamage().apply((float) blocked);
+            int unbreaking = useGear ? MaceDamageCalculator.enchantmentLevel(shield, Enchantments.UNBREAKING) : 0;
+            return Math.max(0,Math.min(shield.getMaxDamage()-shield.getDamageValue(),expectedDurability(cost, unbreaking)));
+        }
 
         double remaining(double damage) {
             if (blocking == null || damage <= 0) return damage;
@@ -19,6 +31,10 @@ final class ShieldDamageCalculator {
             float blocked = blocking.resolveBlockedDamage(source, incoming, angle);
             return blocked >= incoming ? 0 : Math.max(0, damage - blocked);
         }
+    }
+
+    static double expectedDurability(int cost, int unbreaking) {
+        return Math.max(0, cost) / (1.0 + Math.max(0, unbreaking));
     }
 
     static Snapshot capture(LivingEntity target, DamageSource source) {
@@ -36,6 +52,6 @@ final class ShieldDamageCalculator {
             Vec3 facing = target.calculateViewVector(0, target.getYHeadRot());
             angle = Math.acos(direction.dot(facing));
         }
-        return new Snapshot(blocking, source, angle);
+        return new Snapshot(blocking, source, angle, item.copy(), target instanceof Player);
     }
 }
