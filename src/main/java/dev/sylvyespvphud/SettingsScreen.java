@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 public final class SettingsScreen extends Screen {
     private static final String[] PAGES={"Overview","Pitch Bar","Damage","Attribute Swaps","Survival","Reach Outlines","Vectors","Player Tracker","HUD Studio"};
     private static final String[] HUD={"Pitch bar","Fall distance","Hit damage","Retotem","Healing","Attribute swap","Velocity","Damage total","Repot warning","Shield total"};
-    private final Screen parent;private final SettingsSession draft;private final boolean[] expanded=new boolean[28];private int page,tab,hudElement,sidebar,contentX,contentW;private String error="";private Button apply;
+    private final Screen parent;private SettingsSession draft;private final boolean[] expanded=new boolean[28];private int page,tab,hudElement,sidebar,contentX,contentW;private String error="";private Button apply;
     public SettingsScreen(Screen parent){super(Component.translatable("sylvyespvphud.settings.title"));this.parent=parent;draft=new SettingsSession();}
 
     protected void init(){sidebar=Math.min(168,Math.max(118,width/3));contentX=sidebar+14;contentW=Math.max(170,width-contentX-14);buildSidebar();var rows=LinearLayout.vertical().spacing(6);
@@ -91,8 +91,9 @@ public final class SettingsScreen extends Screen {
     private void confirm(String title,Runnable yes){minecraft.gui.setScreen(new SettingsConfirmScreen(this,title,"This changes only the current draft.",yes,()->minecraft.gui.setScreen(this)));}
     private void hudChange(HudStyle style){draft.hud=draft.hud.with(hudElement,style);}
     private void hudCopyPitch(){var s=draft.hud.pitch();draft.hud=draft.hud.with(0,s.edit(s.x(),s.y(),s.scale(),s.color(),s.secondaryColor(),s.combinedColor(),draft.pitch.width(),draft.pitch.thickness(),s.opacity()));}
-    private void apply(){try{draft.apply();minecraft.gui.setScreen(parent);}catch(IOException e){error=e.getMessage();rebuildWidgets();}}
+    private void apply(){apply(false);}
+    private void apply(boolean close){try{draft.apply();draft=new SettingsSession();error="";if(close)minecraft.gui.setScreen(parent);else rebuildWidgets();}catch(IOException e){error=e.getMessage();if(close)minecraft.gui.setScreen(this);else rebuildWidgets();}}
     Screen profileReturnParent(){return parent;}
-    private void closeRequested(){if(!draft.dirty())minecraft.gui.setScreen(parent);else minecraft.gui.setScreen(new SettingsConfirmScreen(this,"Unsaved changes","Apply changes before closing?",this::apply,()->minecraft.gui.setScreen(parent)));}public void onClose(){closeRequested();}
+    private void closeRequested(){if(!draft.dirty())minecraft.gui.setScreen(parent);else minecraft.gui.setScreen(new SettingsConfirmScreen(this,"Unsaved changes","Apply changes before closing?",()->apply(true),()->minecraft.gui.setScreen(parent)));}public void onClose(){closeRequested();}
     public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float dt){g.fill(0,0,width,height,0xff0e141b);g.fill(0,0,sidebar,height,0xff171f29);g.fill(sidebar,0,sidebar+1,height,0xff334353);g.fill(sidebar,0,width,35,0xff131b24);super.extractRenderState(g,mx,my,dt);g.text(font,"SYLVYESPVP HUD",13,14,0xff62d8ff);g.text(font,PAGES[page],contentX,14,0xffffffff);String s=!draft.validation().isEmpty()?draft.validation():error;if(!s.isEmpty())g.text(font,s,contentX,height-40,0xffff7777);else if(draft.dirty())g.text(font,"Unapplied changes",contentX,height-40,0xffffc766);}
 }
