@@ -52,17 +52,29 @@ public final class DamageHud {
         var config=SylvyesPvPHud.DAMAGE_CONFIG.current();var weapon=mc.player.getMainHandItem().copy();
         if(!config.enabled()||(!config.hitEnabled()&&!config.trackerEnabled())||!DamageWeapon.of(weapon).enabled(config))return;
         double amount=MaceDamageCalculator.atAttack(mc.player,target);
+        amount=ShieldDamageCalculator.capture(target,weapon.getDamageSource(mc.player)).remaining(amount);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,weapon,target);
         boolean critical=DamageWeapon.of(weapon)!=DamageWeapon.SPEAR
                 && MaceDamageCalculator.criticalAtAttack(mc.player,target,AttributeSwaps.attackCooldown(mc));
         boolean smash=DamageWeapon.of(weapon)==DamageWeapon.MACE&&mc.player.fallDistance>1.5&&!mc.player.isFallFlying();
         remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),critical,smash));
     }
-    private record ChargeSnapshot(ItemStack weapon,int duration,Vec3 look,double attackerForward,int age) {}
-    private record JabSnapshot(ItemStack weapon,double baseDamage,int age) {}
+    private record ChargeSnapshot(ItemStack weapon,int duration,Vec3 look,double attackerForward,Map<java.util.UUID,ShieldDamageCalculator.Snapshot> shields,int age) {}
+    private record JabSnapshot(ItemStack weapon,double baseDamage,Map<java.util.UUID,ShieldDamageCalculator.Snapshot> shields,int age) {}
+    private static Map<java.util.UUID,ShieldDamageCalculator.Snapshot> captureShields(Minecraft mc,ItemStack weapon) {
+        // Server-confirmed spear contacts can be absent from the predicted ray. Save their
+        // defense now too; never rebuild it from a lowered shield when confirmation arrives.
+        var shields=new LinkedHashMap<java.util.UUID,ShieldDamageCalculator.Snapshot>();
+        var source=weapon.getDamageSource(mc.player);
+        for(var entity:mc.level.entitiesForRendering())if(entity instanceof LivingEntity target&&target!=mc.player)
+            shields.put(target.getUUID(),ShieldDamageCalculator.capture(target,source));
+        return Map.copyOf(shields);
+    }
     private static void registerSpearJab(LivingEntity target,JabSnapshot snapshot) {
         var mc=Minecraft.getInstance();var config=SylvyesPvPHud.DAMAGE_CONFIG.current();if(mc.player==null)return;
+        var shield=snapshot.shields().get(target.getUUID());if(shield==null)return;
         double amount=snapshot.baseDamage()+MaceDamageCalculator.enchantmentBonus(snapshot.weapon(),target);
+        amount=shield.remaining(amount);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,snapshot.weapon(),target);
         remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),false,false));
     }
@@ -70,7 +82,7 @@ public final class DamageHud {
         var mc=Minecraft.getInstance();var config=SylvyesPvPHud.DAMAGE_CONFIG.current();
         if(mc.player==null||mc.level==null||!config.enabled()||(!config.hitEnabled()&&!config.trackerEnabled())||!config.spearEnabled())return;
         ItemStack weapon=mc.player.getMainHandItem().copy();if(DamageWeapon.of(weapon)!=DamageWeapon.SPEAR)return;
-        recentJab=new JabSnapshot(weapon,MaceDamageCalculator.effectiveAttackDamage(mc.player),0);
+        recentJab=new JabSnapshot(weapon,MaceDamageCalculator.effectiveAttackDamage(mc.player),captureShields(mc,weapon),0);
         var range=mc.player.getAttackRangeWith(weapon);
         var hits=ProjectileUtil.getHitEntitiesAlong(mc.player,range,e->PiercingWeapon.canHitEntity(mc.player,e),ClipContext.Block.COLLIDER)
                 .map(block->List.<net.minecraft.world.phys.EntityHitResult>of(),entities->entities);
@@ -80,11 +92,13 @@ public final class DamageHud {
     private static void registerSpearCharge(LivingEntity target,ChargeSnapshot snapshot,KineticWeapon kinetic,boolean requireConditions) {
         var mc=Minecraft.getInstance();var config=SylvyesPvPHud.DAMAGE_CONFIG.current();
         if(mc.player==null)return;
+        var shield=snapshot.shields().get(target.getUUID());if(shield==null)return;
         double targetForward=snapshot.look().dot(KineticWeapon.getMotion(target));
         double relative=Math.max(0,snapshot.attackerForward()-targetForward);
         if(requireConditions&&(kinetic.damageConditions().isEmpty()||!kinetic.damageConditions().get().test(snapshot.duration(),snapshot.attackerForward(),relative,1)))return;
         double amount=SpearDamageMath.raw(mc.player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE),relative,kinetic.damageMultiplier());
         amount+=MaceDamageCalculator.enchantmentBonus(snapshot.weapon(),target);
+        amount=shield.remaining(amount);
         if(config.calculatedDamage()&&config.useEnemyGear())amount=MaceDamageCalculator.afterGear(amount,snapshot.weapon(),target);
         remember(new Pending(target,mc.player.fallDistance,amount,config.calculatedDamage(),false,false));
     }
@@ -93,18 +107,18 @@ public final class DamageHud {
             if(recentJab!=null&&recentJab.age()<40&&(recentCharge==null||recentJab.age()<=recentCharge.age()))registerSpearJab(target,recentJab);
             else if(recentCharge!=null&&recentCharge.age()<40){KineticWeapon kinetic=recentCharge.weapon().get(DataComponents.KINETIC_WEAPON);if(kinetic!=null)registerSpearCharge(target,recentCharge,kinetic,false);}
             p=pending.get(packet.entityId());}
-        if(p!=null){p.confirmed=true;if(p.resetsFallDistance)mc.player.resetFallDistance();}}
+        if(p!=null){p.confirmed=true;if(p.resetsFallDistance&&p.amount>0)mc.player.resetFallDistance();}}
     private static void evaluateSpearCharge(Minecraft mc) {
         var config=SylvyesPvPHud.DAMAGE_CONFIG.current();
-        if(recentJab!=null)recentJab=new JabSnapshot(recentJab.weapon(),recentJab.baseDamage(),recentJab.age()+1);
-        if(recentCharge!=null)recentCharge=new ChargeSnapshot(recentCharge.weapon(),recentCharge.duration(),recentCharge.look(),recentCharge.attackerForward(),recentCharge.age()+1);
+        if(recentJab!=null)recentJab=new JabSnapshot(recentJab.weapon(),recentJab.baseDamage(),recentJab.shields(),recentJab.age()+1);
+        if(recentCharge!=null)recentCharge=new ChargeSnapshot(recentCharge.weapon(),recentCharge.duration(),recentCharge.look(),recentCharge.attackerForward(),recentCharge.shields(),recentCharge.age()+1);
         if(mc.player==null||!config.enabled()||(!config.hitEnabled()&&!config.trackerEnabled())||!config.spearEnabled()||!mc.player.isUsingItem())return;
         ItemStack weapon=mc.player.getUseItem();KineticWeapon kinetic=weapon.get(DataComponents.KINETIC_WEAPON);
         if(kinetic==null)return;
         int duration=weapon.getUseDuration(mc.player)-mc.player.getUseItemRemainingTicks();
         if(duration<kinetic.delayTicks())return;
         duration-=kinetic.delayTicks();Vec3 look=mc.player.getLookAngle();double attackerForward=look.dot(KineticWeapon.getMotion(mc.player));
-        recentCharge=new ChargeSnapshot(weapon.copy(),duration,look,attackerForward,0);
+        recentCharge=new ChargeSnapshot(weapon.copy(),duration,look,attackerForward,captureShields(mc,weapon),0);
         var range=mc.player.getAttackRangeWith(weapon);long now=mc.level.getGameTime();
         double nearbyRange=range.effectiveMaxRange(mc.player)+1;
         for(var target:mc.level.getEntitiesOfClass(LivingEntity.class,mc.player.getBoundingBox().inflate(nearbyRange),entity->entity!=mc.player))
@@ -140,7 +154,7 @@ public final class DamageHud {
         for(var id:deadPlayers.ids())if(pending.values().stream().noneMatch(p->p.target instanceof Player player&&player.getUUID().equals(id)))CumulativeDamageTracker.reset(id);
         evaluateSpearCharge(mc);
     }
-    private static void show(Pending pendingHit,double amount){var config=SylvyesPvPHud.DAMAGE_CONFIG.current();
+    private static void show(Pending pendingHit,double amount){if(!Double.isFinite(amount)||amount<=0)return;var config=SylvyesPvPHud.DAMAGE_CONFIG.current();
         if(config.trackerEnabled()&&pendingHit.target instanceof Player player)recordTrackerHit(player.getUUID(),player.getName().getString(),amount,config.trackerSeconds()*20,config.trackerHudSeconds()*20,config.trackerHudAlwaysVisible(),!player.isAlive()||player.isDeadOrDying());
         if(config.hitEnabled()){hit=DamageText.format(config.hitTemplate(),pendingHit.blocks,amount);hitAmount=amount;hitCritical=pendingHit.critical;displayTicks=config.hitSeconds()*20;}}
     static void recordTrackerHit(java.util.UUID id,String name,double amount,int storageTicks,int hudTicks,boolean always,boolean deadNow){

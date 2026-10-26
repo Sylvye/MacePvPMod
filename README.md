@@ -75,7 +75,9 @@ Strength, Weakness, custom attack attributes, and attribute swaps are included i
 
 **Bold critical damage** is enabled by default. It bolds damage only after a server-confirmed ordinary attack met every vanilla critical-hit condition at attack time. Falling alone is insufficient, and spear jabs and charges are never styled as critical hits.
 
-**Use enemy gear** is available only in calculated mode. It estimates post-gear health damage using client-visible armor, toughness, Protection, and Breach. It intentionally excludes Resistance, absorption, active shields, server plugins, and equipment hidden from the client, so the result is a best-effort estimate.
+Shield blocking is estimated from the target's active blocking item, activation delay, facing, and damage-type rules at attack time, independently of **Use enemy gear**. Fully blocked estimates leave the hit counter and cumulative damage tracker unchanged, including their timers. Partial blocks reduce the estimate before armor. Spear confirmation fallback preserves the saved shield state. Reported mode still prefers observed positive health loss and uses the shield-adjusted estimate when falling back to calculation.
+
+**Use enemy gear** is available only in calculated mode. It estimates post-gear health damage using client-visible armor, toughness, Protection, and Breach. It intentionally excludes Resistance, absorption, server plugins, and equipment hidden from the client, so the result is a best-effort estimate. Shield predictions also depend on client-visible state and may differ from server decisions under latency or custom combat rules.
 
 The Minecraft 26.2 formula, verified against the bundled `MaceItem` and `Player` implementations and `data/minecraft/enchantment/density.json`, is:
 
