@@ -3,7 +3,11 @@ package dev.sylvyespvphud;
 import java.util.List;
 
 public record RepotConfig(boolean enabled, List<String> effects, int thresholdSeconds,
-                          int graceSeconds, boolean icons, int iconSpacing, String template) {
+                          int graceSeconds, boolean icons, int iconSpacing, String template, RepotAttention attention) {
+    public RepotConfig(boolean enabled, List<String> effects, int thresholdSeconds,
+                       int graceSeconds, boolean icons, int iconSpacing, String template) {
+        this(enabled, effects, thresholdSeconds, graceSeconds, icons, iconSpacing, template, RepotAttention.defaults());
+    }
     static RepotConfig defaults() {
         return new RepotConfig(true, List.of("minecraft:speed", "minecraft:strength",
                 "minecraft:fire_resistance", "minecraft:weaving"), 15, 10, true, 4, "Repot {effect}");
@@ -18,7 +22,8 @@ public record RepotConfig(boolean enabled, List<String> effects, int thresholdSe
         String error = textError(message);
         if (!error.isEmpty()) throw new IllegalArgumentException("Repot Warning: " + error);
         return new RepotConfig(enabled, selected, Math.clamp(thresholdSeconds, 0, 600),
-                Math.clamp(graceSeconds, 0, 600), icons, Math.clamp(iconSpacing, 0, 20), message);
+                Math.clamp(graceSeconds, 0, 600), icons, Math.clamp(iconSpacing, 0, 20), message,
+                attention == null ? RepotAttention.defaults() : attention.validated());
     }
 
     static String textError(String template) {

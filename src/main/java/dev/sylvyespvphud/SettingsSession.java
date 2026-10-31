@@ -21,6 +21,7 @@ final class SettingsSession {
     ReachOutlineConfig reach;
     VectorsConfig vectors;
     TrackerConfig tracker;
+    int repotPreviewState;
 
     SettingsSession() {
         originalPitch = pitch = SylvyesPvPHud.CONFIG.current();
@@ -81,6 +82,7 @@ final class SettingsSession {
     void swap(String field,Object value){swap=with(swap,field,value);}
     void survival(String field,Object value){survival=with(survival,field,value);}
     void repot(String field,Object value){survival("repot",with(survival.repot(),field,value));}
+    void repotAttention(String field,Object value){repot("attention",with(survival.repot().attention(),field,value));}
     void reach(String field,Object value){reach=with(reach,field,value);}
     void vectors(String field,Object value){vectors=with(vectors,field,value);}
     void tracker(String field,Object value){tracker=with(tracker,field,value);}

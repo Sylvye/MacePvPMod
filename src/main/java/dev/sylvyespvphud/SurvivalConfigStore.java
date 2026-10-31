@@ -68,6 +68,20 @@ public final class SurvivalConfigStore {
                         for (var setting : value.getAsJsonObject().entrySet()) {
                             if (!settings.has(setting.getKey())) continue;
                             JsonElement expected = settings.get(setting.getKey()), actual = setting.getValue();
+                            if (setting.getKey().equals("attention")) {
+                                if (!actual.isJsonObject()) throw new JsonParseException("Invalid repot attention settings");
+                                var attention = expected.getAsJsonObject();
+                                for (var option : actual.getAsJsonObject().entrySet()) {
+                                    if (!attention.has(option.getKey())) continue;
+                                    var expectedOption = attention.getAsJsonPrimitive(option.getKey());
+                                    if (!option.getValue().isJsonPrimitive()) throw new JsonParseException("Invalid attention setting");
+                                    var actualOption = option.getValue().getAsJsonPrimitive();
+                                    if (expectedOption.isBoolean() != actualOption.isBoolean() || expectedOption.isNumber() != actualOption.isNumber())
+                                        throw new JsonParseException("Invalid attention setting type");
+                                    attention.add(option.getKey(), actualOption);
+                                }
+                                continue;
+                            }
                             if (expected.isJsonArray()) {
                                 if (!actual.isJsonArray()) throw new JsonParseException("Invalid repot effects");
                                 for (var effect : actual.getAsJsonArray())

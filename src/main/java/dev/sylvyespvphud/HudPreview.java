@@ -16,7 +16,7 @@ final class HudPreview {
         if(element==8) {
             var config=draft.survival.repot();
             var effects=config.effects().isEmpty()?RepotConfig.defaults().effects():config.effects();
-            return RepotHud.render(g,config,effects,style,viewportW,viewportH,muted);
+            return RepotHud.preview(g,config,effects,style,viewportW,viewportH,muted,draft.repotPreviewState);
         }
         String text=switch(element) {
             case 1->DamageText.format(draft.damage.fallTemplate(),12.5,18);

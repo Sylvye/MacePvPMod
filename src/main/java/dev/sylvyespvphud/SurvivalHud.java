@@ -31,7 +31,7 @@ public final class SurvivalHud {
                 || !p.isAlive() || p.isSpectator()) return;
         var c = SylvyesPvPHud.SURVIVAL_CONFIG.current();
         if (!c.enabled()) return;
-        RepotHud.extract(g);
+        RepotHud.extract(g, delta);
         if (c.damageIndicatorEnabled() && damageEffectTicks > 0) drawDamageIndicator(g, c);
         if (c.retotemEnabled() && SurvivalState.needsRetotem(available.totem(), p.getOffhandItem().isEmpty()))
             HudRenderer.text(g, c.retotemText(), SylvyesPvPHud.HUD_CONFIG.current().retotem(), 0);

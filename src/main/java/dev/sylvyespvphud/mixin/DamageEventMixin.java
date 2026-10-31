@@ -12,6 +12,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public abstract class DamageEventMixin {
+    @Inject(method = "handleRemoveMobEffect", at = @At("HEAD"))
+    private void sylvyespvphud$repotRemoval(net.minecraft.network.protocol.game.ClientboundRemoveMobEffectPacket packet, CallbackInfo ci) {
+        // HEAD also runs on the network thread before vanilla schedules packet processing.
+        if (Minecraft.getInstance().isSameThread()) dev.sylvyespvphud.RepotHud.removingEffect(packet);
+    }
     @Inject(method = "handleSoundEvent", at = @At("TAIL"))
     private void sylvyespvphud$blockSound(net.minecraft.network.protocol.game.ClientboundSoundPacket packet, CallbackInfo ci) {
         dev.sylvyespvphud.ShieldDamageEvents.sound(packet);
@@ -37,6 +42,9 @@ public abstract class DamageEventMixin {
     @Inject(method = "handleEntityEvent", at = @At("TAIL"))
     private void sylvyespvphud$entityEvent(ClientboundEntityEventPacket packet, CallbackInfo ci) {
         var level=Minecraft.getInstance().level;var entity=level==null?null:packet.getEntity(level);
-        if(entity!=null)DamageHud.entityEvent(entity,packet.getEventId());
+        if(entity!=null) {
+            DamageHud.entityEvent(entity,packet.getEventId());
+            dev.sylvyespvphud.RepotHud.entityEvent(entity,packet.getEventId());
+        }
     }
 }
