@@ -1,11 +1,11 @@
 package dev.sylvyespvphud;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.UUID;
-import net.minecraft.client.Minecraft;
+import java.util.function.Predicate;
 import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -14,229 +14,217 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
-/** Correlates local attack snapshots with server block sounds and equipment updates. */
+/** Shield evidence references the same attack history used by health damage. */
 final class ShieldDamageHud {
-    static final ShieldDamageTotals TRACKER = new ShieldDamageTotals(CumulativeDamageTracker.FADE_TICKS);
-    static final ShieldDamageTotals HITS = new ShieldDamageTotals(0);
-    private static final List<Attempt> attempts = new ArrayList<>();
-    private static final int CONFIRMATION_TICKS=40;
+    static final ShieldDamageTotals TRACKER=new ShieldDamageTotals(CumulativeDamageTracker.FADE_TICKS);
+    static final ShieldDamageTotals HITS=new ShieldDamageTotals(0);
     private record ShieldKey(UUID target,EquipmentSlot slot) {}
     private static final Map<ShieldKey,ItemStack> serverShields=new HashMap<>();
-    private static int clock;
+    private static final List<Report> reports=new ArrayList<>();
     private static boolean shieldHitVisible;
     private static double hitBlocks;
 
-    static final class Attempt {
+    private static final class Report {
+        final AttackHistory.Evidence<CombatAttempt> evidence;
+        final Predicate<ShieldDamageCalculator.Snapshot> defense;
         final LivingEntity target;
-        final ShieldDamageCalculator.Snapshot shield;
-        final Object token;
-        final double cost, rawCost, healthDamage, blocks;
-        final EquipmentSlot slot;
-        final DamageWeapon weapon;
-        final double healthBefore;
-        final int created;
-        boolean contact, confirmed, equipmentSeen, soundSeen, broken;
-        final boolean calculated;
-        boolean applied, hitAllowed=true;
-        int equipmentAt, confirmedAt;
-        double recordedAmount;
-        Object trackerSession, hitSession;
-        Attempt(LivingEntity target, ShieldDamageCalculator.Snapshot shield, double raw, ItemStack weaponStack, Object token, boolean contact) {
-            this.target = target; this.shield = shield; this.token = token; this.contact = contact;
-            var config = SylvyesPvPHud.DAMAGE_CONFIG.current();
-            calculated=config.calculatedDamage();
-            weapon = DamageWeapon.of(weaponStack);
-            healthBefore = target.getHealth();
-            cost = shield.durability(raw, config.calculatedDamage() && config.useEnemyGear());
-            rawCost = shield.durability(raw, false);
-            double remaining=shield.remaining(raw);
-            healthDamage = config.calculatedDamage() && config.useEnemyGear() ? MaceDamageCalculator.afterGear(remaining,weaponStack,target) : remaining;
-            blocks = Minecraft.getInstance().player.fallDistance;
-            slot = target.getUsedItemHand().asEquipmentSlot();
-            created = clock;
+        EquipmentSlot slot;
+        CombatAttempt attack;
+        ShieldDamageCalculator.Snapshot shield;
+        boolean soundSeen,equipmentSeen,broken,breakApplied,applied,hitAllowed=true;
+        double measured=Double.NaN,recordedAmount;
+        Object trackerSession,hitSession;
+        Report(AttackHistory.Evidence<CombatAttempt> evidence,Predicate<ShieldDamageCalculator.Snapshot> defense,EquipmentSlot slot) {
+            this.evidence=evidence;this.defense=defense;this.slot=slot;target=evidence.candidates.getFirst().value.target;
+        }
+        ShieldDamageCalculator.Snapshot shield(CombatAttempt a) {
+            var matches=a.shields.stream().filter(defense).filter(s->slot==null||s.slot()==slot).toList();
+            return matches.size()==1?matches.getFirst().confirmed():null;
+        }
+        boolean matches(EquipmentSlot slot,ItemStack before) {
+            if(this.slot!=null&&this.slot!=slot)return false;
+            if(attack!=null)return shield!=null&&shield.slot()==slot&&sameShield(shield.shield(),before);
+            return evidence.candidates.stream().anyMatch(e->e.value.shields.stream().anyMatch(s->s.slot()==slot&&defense.test(s)&&sameShield(s.shield(),before)));
+        }
+        double weight() {
+            CombatAttempt a=attack!=null?attack:evidence.candidates.getFirst().value;
+            var s=shield(a);return Math.max(1,s==null?0:s.durability(a.raw,false));
         }
     }
-
-    static boolean enabled(DamageConfig c) { return c.enabled() && (c.shieldTrackerEnabled() || c.hitEnabled() && c.hitShieldEnabled()); }
-
-    static Attempt prepare(LivingEntity target, ShieldDamageCalculator.Snapshot shield, double raw,
-                           ItemStack weapon, Object token, boolean contact) {
-        var config = SylvyesPvPHud.DAMAGE_CONFIG.current();
-        DamageWeapon type = DamageWeapon.of(weapon);
-        if (!enabled(config) || !type.enabled(config) || type != DamageWeapon.MACE && type != DamageWeapon.SPEAR
-                || (config.calculatedDamage()?shield.durability(raw,false)<=0:!shield.player()||!shield.shield().isDamageableItem()||!Double.isFinite(raw)||raw<=0||shield.remaining(raw)>=raw)) return null;
-        for (Attempt previous : attempts) if (previous.target == target && previous.token == token) {
-            previous.contact |= contact;
-            return previous;
+    static boolean enabled(DamageConfig c){return c.enabled()&&(c.shieldTrackerEnabled()||c.hitEnabled()&&c.hitShieldEnabled());}
+    private static Report create(UUID id,Predicate<ShieldDamageCalculator.Snapshot> defense,EquipmentSlot slot,long now) {
+        var event=DamageHud.HISTORY.confirm(id,AttackHistory.Kind.BLOCK,a->a.contact&&a.shieldWeapon()
+                &&a.shields.stream().anyMatch(s->(slot==null||s.slot()==slot)&&defense.test(s)),now);
+        if(event==null)return null;
+        var report=new Report(event,defense,slot);reports.add(report);
+        if(reports.size()>AttackHistory.TOTAL_LIMIT)cancel(reports.removeFirst());
+        return report;
+    }
+    private static void cancel(Report r) {
+        r.evidence.cancelled=true;
+        for(var entry:r.evidence.candidates)entry.cancelled=true;
+    }
+    static void blockSound(Holder<SoundEvent> sound,Vec3 position,Integer entityId) {
+        long now=CombatTiming.now();
+        Predicate<ShieldDamageCalculator.Snapshot> defense=s->s.blocking().blockSound()
+                .map(block->block.value().location().equals(sound.value().location())).orElse(false);
+        LivingEntity target=null;
+        // Include equipment-confirmed reports so a following sound corroborates rather than duplicates them.
+        var candidates=new ArrayList<CombatAttempt>();
+        for(var entry:DamageHud.HISTORY.entries())if(!entry.cancelled&&now<entry.expires)candidates.add(entry.value);
+        for(var report:reports)if(!report.evidence.cancelled&&!report.soundSeen&&report.attack!=null
+                &&now-report.evidence.received<=report.attack.retention)candidates.add(report.attack);
+        for(var a:candidates) {
+            if(!a.contact||!a.shieldWeapon()||a.shields.stream().noneMatch(defense))continue;
+            a.samplePosition(now);
+            if(entityId!=null?a.target.getId()!=entityId:position==null||!a.near(position))continue;
+            if(target!=null&&target!=a.target)return; // A positional sound supplies no attacker or entity identity.
+            target=a.target;
         }
-        Attempt attempt = new Attempt(target, shield, raw, weapon, token, contact);
-        attempts.add(attempt);
-        serverShields.put(new ShieldKey(target.getUUID(),attempt.slot),shield.shield().copy());
-        return attempt;
-    }
-
-    static void confirm(Attempt attempt) {
-        if (attempt == null || attempt.confirmed) return;
-        attempt.confirmed = true;
-        attempt.confirmedAt=clock;
-        var c = SylvyesPvPHud.DAMAGE_CONFIG.current();
-        if (!enabled(c) || !attempt.weapon.enabled(c)) return;
-        // A block sound proves contact, not how much durability the server removed.
-        if(attempt.calculated)record(attempt,attempt.cost);
-        if(attempt.healthDamage>0)DamageHud.shieldHealthHit(attempt);
-    }
-
-    private static void record(Attempt attempt,double amount) {
-        var c=SylvyesPvPHud.DAMAGE_CONFIG.current();
-        if(!enabled(c)||!attempt.weapon.enabled(c)||amount<=0||!Double.isFinite(amount))return;
-        UUID id=attempt.target.getUUID();String name=attempt.target.getName().getString();
-        attempt.applied=true;attempt.recordedAmount=amount;
-        if(c.shieldTrackerEnabled()&&attempt.target instanceof Player)
-            attempt.trackerSession=TRACKER.record(id,name,amount,c.trackerSeconds()*20,c.trackerHudSeconds()*20,c.trackerHudAlwaysVisible());
-        if(c.hitEnabled()&&c.hitShieldEnabled()&&attempt.hitAllowed&&attempt.healthDamage<=0) {
-            attempt.hitSession=HITS.record(id,name,amount,c.hitSeconds()*20,c.hitSeconds()*20,false);
-            hitBlocks=attempt.blocks;DamageHud.clearHealthDisplay();shieldHitVisible=true;
+        if(target==null)return;
+        for(var r:reports)if(r.target==target&&!r.soundSeen&&!r.evidence.cancelled
+                &&now-r.evidence.received<=r.evidence.candidates.getFirst().value.retention
+                &&r.evidence.candidates.stream().anyMatch(e->e.value.shields.stream().anyMatch(defense))) {
+            r.soundSeen=true;return;
         }
+        var report=create(target.getUUID(),defense,null,now);
+        if(report!=null)report.soundSeen=true;
     }
-
-    /** Every batch contributes precisely the observed delta; estimates only apportion late corrections. */
-    private static void measured(List<Attempt> batch,double loss) {
-        if(batch.isEmpty()||loss<=0)return;
-        double weight=batch.stream().mapToDouble(a->Math.max(1,a.rawCost)).sum();
-        double left=loss;
-        for(int i=0;i<batch.size();i++) {
-            Attempt a=batch.get(i);
-            double amount=i==batch.size()-1?left:loss*Math.max(1,a.rawCost)/weight;left-=amount;
-            confirm(a);
-            if(a.applied) {
-                double correction=amount-a.recordedAmount;
-                TRACKER.adjust(a.target.getUUID(),a.trackerSession,correction);
-                HITS.adjust(a.target.getUUID(),a.hitSession,correction);
-                a.recordedAmount=amount;
-            } else record(a,amount);
-            a.equipmentSeen=true;a.equipmentAt=clock;
-        }
-    }
-
-    static void healthHit(UUID id) {
-        for(Attempt a:attempts)if(a.target.getUUID().equals(id))a.hitAllowed=false;
-        HITS.reset(id);
-        HITS.dismiss();
-        shieldHitVisible = false;
-    }
-
-    static void blockSound(Holder<SoundEvent> sound, Vec3 position, Integer entityId) {
-        Attempt match = null;
-        for (Attempt attempt : attempts) {
-            if (!attempt.contact || attempt.soundSeen || clock - attempt.created > CONFIRMATION_TICKS
-                    || attempt.confirmed && (!attempt.equipmentSeen || clock-attempt.equipmentAt>2)) continue;
-            if (entityId != null ? attempt.target.getId() != entityId : attempt.target.position().distanceToSqr(position) > .25) continue;
-            if (attempt.shield.blocking().blockSound().isEmpty()
-                    || !attempt.shield.blocking().blockSound().get().value().location().equals(sound.value().location())) continue;
-            // Positional sounds identify no attacker. Require one matching local target.
-            if (match != null && match.target != attempt.target) return;
-            if (match == null || match.confirmed && !attempt.confirmed
-                    || match.confirmed && attempt.confirmed && attempt.created>=match.created) match = attempt;
-        }
-        if(match!=null)match.soundSeen=true;
-        confirm(match);
-    }
-
     private static boolean sameShield(ItemStack first,ItemStack second) {
         if(first.isEmpty()||second.isEmpty())return false;
-        ItemStack a=first.copyWithCount(1),b=second.copyWithCount(1);
-        a.setDamageValue(0);b.setDamageValue(0);
+        ItemStack a=first.copyWithCount(1),b=second.copyWithCount(1);a.setDamageValue(0);b.setDamageValue(0);
         return ItemStack.isSameItemSameComponents(a,b);
     }
-
-    static void equipment(LivingEntity target, EquipmentSlot slot, ItemStack before, ItemStack after) {
+    static void equipment(LivingEntity target,EquipmentSlot slot,ItemStack before,ItemStack after) {
         if(slot!=EquipmentSlot.MAINHAND&&slot!=EquipmentSlot.OFFHAND)return;
-        ShieldKey key=new ShieldKey(target.getUUID(),slot);
-        // Preserve the last known remaining durability when removal precedes the break event.
-        if(serverShields.containsKey(key))serverShields.put(key,(after.isEmpty()?before:after).copy());
-        if(!before.isDamageableItem())return;
-        if(after.isEmpty())return; // Only a break event can distinguish breakage from unequipping.
+        var key=new ShieldKey(target.getUUID(),slot);
+        serverShields.put(key,(after.isEmpty()?before:after).copy());
+        if(!before.isDamageableItem()||after.isEmpty())return;
         int loss=after.getDamageValue()-before.getDamageValue();
         if(!sameShield(before,after)||loss<0) {
-            attempts.removeIf(a->!a.calculated&&a.target==target&&a.slot==slot);
+            for(var r:reports)if(r.target==target&&r.matches(slot,before))cancel(r);
+            for(var e:DamageHud.HISTORY.entries())if(e.value.target==target&&e.value.shields.stream().anyMatch(s->s.slot()==slot&&sameShield(s.shield(),before)))e.cancelled=true;
             return;
         }
         if(loss<=0)return;
-        List<Attempt> reported=new ArrayList<>();
-        double unmatched=loss;
-        for(Attempt a:attempts) {
-            if(a.calculated||a.target!=target||a.slot!=slot||!a.contact||!sameShield(a.shield.shield(),before))continue;
-            if(!a.equipmentSeen&&(a.confirmed||unmatched>0)){reported.add(a);unmatched-=Math.max(1,a.rawCost);}
+        long now=CombatTiming.now();
+        var batch=new ArrayList<Report>();
+        for(var r:reports)if(r.target==target&&!r.equipmentSeen&&!r.evidence.cancelled&&r.matches(slot,before))batch.add(r);
+        var possible=DamageHud.HISTORY.entries().stream().filter(e->!e.cancelled&&now<e.expires&&e.value.target==target&&e.value.contact&&e.value.shieldWeapon()
+                &&e.value.shields.stream().anyMatch(s->s.slot()==slot&&sameShield(s.shield(),before))).toList();
+        int existing=(int)batch.stream().filter(r->r.attack==null).count();
+        double budget=loss-batch.stream().mapToDouble(Report::weight).sum();
+        boolean equivalent=possible.stream().map(e->e.value.blockSignature()).distinct().count()<=1;
+        int count=0;
+        if(!possible.isEmpty()) {
+            var first=possible.getFirst().value;
+            var shield=first.shields.stream().filter(s->s.slot()==slot&&sameShield(s.shield(),before)).findFirst().orElseThrow().confirmed();
+            // Coalesced identical contacts may be inferred from wear. Different estimates require more evidence.
+            count=equivalent?(int)Math.ceil(Math.max(0,budget)/Math.max(1,shield.durability(first.raw,false))):batch.isEmpty()?1:0;
+            count=Math.min(count,Math.max(0,possible.size()-existing));
         }
-        if(!reported.isEmpty())measured(reported,loss);
-        // Preserve Calculated mode's estimate and its existing confirmation/deduplication behavior.
-        double budget=loss;
-        for(Attempt a:attempts) {
-            if(!a.calculated||a.target!=target||a.slot!=slot||!a.contact||a.equipmentSeen||!sameShield(a.shield.shield(),before))continue;
-            if(budget<=0)break;
-            a.equipmentSeen=true;a.equipmentAt=clock;
-            budget-=Math.min(a.rawCost,Math.max(1,a.cost));confirm(a);
+        for(int i=0;i<count;i++) {
+            var r=create(target.getUUID(),s->s.slot()==slot&&sameShield(s.shield(),before),slot,now);
+            if(r!=null)batch.add(r);
+        }
+        if(batch.isEmpty())return;
+        double weight=batch.stream().mapToDouble(Report::weight).sum(),left=loss;
+        for(int i=0;i<batch.size();i++) {
+            var r=batch.get(i);r.slot=slot;r.equipmentSeen=true;
+            r.measured=i==batch.size()-1?left:loss*r.weight()/weight;left-=r.measured;
+            // The equipment slot and item are server evidence that can narrow a preceding sound.
+            if(r.attack==null)r.evidence.candidates.removeIf(e->e.value.shields.stream().noneMatch(s->s.slot()==slot&&sameShield(s.shield(),before)&&r.defense.test(s)));
+            if(r.attack!=null&&r.applied&&!r.attack.calculated)correct(r,r.measured);
         }
     }
-
-    static void broken(LivingEntity target, EquipmentSlot slot) {
-        Attempt last = null;
-        for (Attempt attempt : attempts) if (attempt.target == target && attempt.slot == slot && attempt.contact) last = attempt;
-        if (last == null) return; // A non-shield item breaking must not reset shield totals.
-        ItemStack held=target.getItemBySlot(slot);
-        if(!held.isEmpty()&&!ItemStack.isSameItem(held,last.shield.shield()))return;
-        last.broken = true;
-        if(last.calculated)confirm(last);
-        else if(!last.equipmentSeen) {
-            ShieldKey key=new ShieldKey(target.getUUID(),slot);
-            ItemStack known=held.isEmpty()?serverShields.getOrDefault(key,last.shield.shield()):held;
-            if(sameShield(known,last.shield.shield())) {
-                double remaining=Math.max(0,known.getMaxDamage()-known.getDamageValue());
-                List<Attempt> batch=new ArrayList<>();
-                for(Attempt a:attempts)if(!a.calculated&&a.target==target&&a.slot==slot&&a.contact&&!a.equipmentSeen&&sameShield(a.shield.shield(),known))batch.add(a);
-                measured(batch,remaining);
-            }
+    static void resolved(AttackHistory.Resolution<CombatAttempt> result) {
+        var report=reports.stream().filter(r->r.evidence==result.evidence()).findFirst().orElse(null);
+        if(report==null)return;
+        report.attack=result.entry().value;report.shield=report.shield(report.attack);
+        if(report.shield==null){cancel(report);return;}
+        report.slot=report.shield.slot();
+        double health=report.attack.afterGear(report.shield.remaining(report.attack.raw));
+        DamageHud.queueHealth(report.attack,health,result.evidence().received);
+    }
+    static void finalizeResults(long now) {
+        for(var r:reports) {
+            if(r.evidence.cancelled||r.attack==null||r.applied)continue;
+            if(!r.attack.type.enabled(SylvyesPvPHud.DAMAGE_CONFIG.current()))continue;
+            if(r.attack.calculated)record(r,r.shield.durability(r.attack.raw,r.attack.useGear));
+            else if(r.equipmentSeen)record(r,r.measured);
+            else if(now-r.evidence.received>=r.attack.retention)record(r,r.shield.durability(r.attack.raw,false));
         }
-        serverShields.remove(new ShieldKey(target.getUUID(),slot));
-        TRACKER.broken(target.getUUID());
-        HITS.broken(target.getUUID());
-        // Late sounds/equipment for the broken item must not consume a replacement shield's first hit.
-        attempts.removeIf(a -> a.target==target && a.slot==slot);
+        for(var r:reports)if(r.broken&&!r.breakApplied&&r.attack!=null&&r.applied) {
+            boolean waiting=reports.stream().anyMatch(other->other.target==r.target&&other.slot==r.slot&&other.broken&&!other.applied&&!other.evidence.cancelled);
+            if(!waiting){TRACKER.broken(r.target.getUUID());HITS.broken(r.target.getUUID());
+                for(var other:reports)if(other.target==r.target&&other.slot==r.slot&&other.broken)other.breakApplied=true;}
+        }
     }
-
-    static void unblocked(Attempt attempt) {
-        if(attempt!=null&&!attempt.confirmed){attempt.confirmed=true;attempts.remove(attempt);}
+    private static void record(Report r,double amount) {
+        r.applied=true;r.recordedAmount=amount;
+        var c=SylvyesPvPHud.DAMAGE_CONFIG.current();
+        if(!enabled(c)||!r.attack.type.enabled(c)||!Double.isFinite(amount)||amount<=0)return;
+        var a=r.attack;UUID id=a.target.getUUID();String name=a.target.getName().getString();
+        if(c.shieldTrackerEnabled()&&a.target instanceof Player)r.trackerSession=TRACKER.record(id,name,amount,c.trackerSeconds()*20,c.trackerHudSeconds()*20,c.trackerHudAlwaysVisible());
+        if(c.hitEnabled()&&c.hitShieldEnabled()&&r.hitAllowed&&r.shield.remaining(a.raw)<=0&&DamageHud.allowDisplay(a.sequence)) {
+            r.hitSession=HITS.record(id,name,amount,c.hitSeconds()*20,c.hitSeconds()*20,false);
+            hitBlocks=a.blocks;DamageHud.clearHealthDisplay();shieldHitVisible=true;
+        }
     }
-
+    private static void correct(Report r,double amount) {
+        double difference=amount-r.recordedAmount;
+        TRACKER.adjust(r.target.getUUID(),r.trackerSession,difference);HITS.adjust(r.target.getUUID(),r.hitSession,difference);
+        r.recordedAmount=amount;
+    }
+    static void broken(LivingEntity target,EquipmentSlot slot) {
+        var key=new ShieldKey(target.getUUID(),slot);
+        ItemStack known=serverShields.getOrDefault(key,target.getItemBySlot(slot));
+        if(known.get(net.minecraft.core.component.DataComponents.BLOCKS_ATTACKS)==null)return;
+        long now=CombatTiming.now();
+        var batch=new ArrayList<Report>();
+        for(var r:reports)if(r.target==target&&!r.evidence.cancelled&&!r.equipmentSeen&&r.matches(slot,known))batch.add(r);
+        if(batch.isEmpty()) {
+            var r=create(target.getUUID(),s->s.slot()==slot&&sameShield(s.shield(),known),slot,now);
+            if(r!=null)batch.add(r);
+        }
+        double remaining=Math.max(0,known.getMaxDamage()-known.getDamageValue());
+        double weight=batch.stream().mapToDouble(Report::weight).sum(),left=remaining;
+        for(int i=0;i<batch.size();i++) {
+            var r=batch.get(i);r.slot=slot;r.broken=true;r.equipmentSeen=true;
+            r.measured=i==batch.size()-1?left:remaining*r.weight()/weight;left-=r.measured;
+            if(r.attack!=null&&r.applied&&!r.attack.calculated)correct(r,r.measured);
+        }
+        for(var r:reports)if(r.target==target&&r.matches(slot,known))r.broken=true;
+        serverShields.remove(key);
+    }
+    static void healthHit(UUID id) {
+        for(var r:reports)if(r.target.getUUID().equals(id))r.hitAllowed=false;
+        HITS.reset(id);HITS.dismiss();shieldHitVisible=false;
+    }
     static void otherAttacker(int entityId) {
-        attempts.removeIf(a -> a.target.getId()==entityId && !a.confirmed);
+        for(var r:reports)if(r.target.getId()==entityId&&!r.equipmentSeen)cancel(r);
     }
-
     static void died(UUID id) {
-        TRACKER.reset(id); HITS.reset(id);
-        attempts.removeIf(a -> a.target.getUUID().equals(id));
+        TRACKER.reset(id);HITS.reset(id);
+        reports.removeIf(r->{if(!r.target.getUUID().equals(id))return false;cancel(r);return true;});
         serverShields.keySet().removeIf(k->k.target().equals(id));
     }
-
     static void tick() {
-        clock++;
-        TRACKER.tick(); HITS.tick();
-        for(Attempt a:attempts)if(!a.calculated&&a.confirmed&&!a.applied&&!a.equipmentSeen&&clock-a.confirmedAt>=CONFIRMATION_TICKS)record(a,a.cost);
-        attempts.removeIf(a -> !a.target.isAlive() || !a.weapon.enabled(SylvyesPvPHud.DAMAGE_CONFIG.current())
-                || (!a.confirmed || a.calculated || a.equipmentSeen) && clock-a.created>CONFIRMATION_TICKS
-                || a.confirmed&&!a.calculated&&a.cost<=0&&clock-a.confirmedAt>CONFIRMATION_TICKS
-                || !a.calculated&&a.applied&&!a.equipmentSeen&&!TRACKER.retains(a.target.getUUID(),a.trackerSession)&&!HITS.retains(a.target.getUUID(),a.hitSession));
-        var c = SylvyesPvPHud.DAMAGE_CONFIG.current();
-        if (!c.enabled()) { reset(); return; }
-        if (!c.shieldTrackerEnabled()) TRACKER.resetAll();
-        if (!c.hitEnabled() || !c.hitShieldEnabled()) { HITS.resetAll(); shieldHitVisible = false; }
-        if (!enabled(c)){attempts.clear();serverShields.clear();}
+        TRACKER.tick();HITS.tick();long now=CombatTiming.now();
+        reports.removeIf(r->r.evidence.cancelled||r.attack!=null&&(r.attack.target.isRemoved()||!r.attack.type.enabled(SylvyesPvPHud.DAMAGE_CONFIG.current())
+                ||now-r.evidence.received>r.attack.retention&&r.applied&&(r.attack.calculated||r.equipmentSeen
+                ||!TRACKER.retains(r.target.getUUID(),r.trackerSession)&&!HITS.retains(r.target.getUUID(),r.hitSession))));
+        var c=SylvyesPvPHud.DAMAGE_CONFIG.current();
+        if(!c.enabled()){reset();return;}
+        if(!c.shieldTrackerEnabled())TRACKER.resetAll();
+        if(!c.hitEnabled()||!c.hitShieldEnabled()){HITS.resetAll();shieldHitVisible=false;}
+        // Evidence remains active even when both shield displays are disabled.
+        serverShields.keySet().removeIf(key->reports.stream().noneMatch(r->r.target.getUUID().equals(key.target())&&(r.slot==null||r.slot==key.slot()))
+                &&DamageHud.HISTORY.entries().stream().noneMatch(e->e.target.equals(key.target())));
     }
-    static boolean hitVisible() { return shieldHitVisible && Double.isFinite(HITS.amount()); }
-    static String hitText(DamageConfig c) {
-        return DamageText.format(c.hitShieldTemplate(), hitBlocks, HITS.amount());
-    }
-    static void resetTracker() { TRACKER.resetAll(); }
-    static void reset() { attempts.clear();serverShields.clear(); TRACKER.resetAll(); HITS.resetAll(); shieldHitVisible = false; }
-    private ShieldDamageHud() {}
+    static boolean hitVisible(){return shieldHitVisible&&Double.isFinite(HITS.amount());}
+    static String hitText(DamageConfig c){return DamageText.format(c.hitShieldTemplate(),hitBlocks,HITS.amount());}
+    static void resetTracker(){TRACKER.resetAll();}
+    static void reset(){for(var r:reports)cancel(r);reports.clear();serverShields.clear();TRACKER.resetAll();HITS.resetAll();shieldHitVisible=false;}
+    private ShieldDamageHud(){}
 }

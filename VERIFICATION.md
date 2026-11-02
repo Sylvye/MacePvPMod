@@ -91,3 +91,12 @@ Limits: Vulkan was not tested. Actual window resizing, spectator mode, the unbou
 - Client checks exercise the real remove/update-effect and entity-event packet handlers, local/other-player pops, ambient removals, reapplication, zero grace, mixed text colors, settings toggles, validation, Apply/draft isolation, preview-state controls, and GUI scales 1/2/3. Fixed the client test cleanup to remove effects individually: vanilla's removeAllEffects is server-only.
 - Visually reviewed the attention settings, mixed icon/text previews with a custom ended color, and a controlled preview of default red borders/names at both maximum and minimum pulse opacity. Minecraft clamps unsupported requested GUI scales to the test window.
 - Limits: controlled client game tests and previews; live multiplayer/server-specific effect timing was not tested. Totem correlation intentionally uses a bounded two-client-tick window.
+
+## Lag-tolerant combat correlation — November 2, 2026
+
+- With JDK 25, the focused unit run passed: **41 tests**, zero failures/errors, covering attack correlation, mace/spear math, defenses, shield totals, and cumulative damage totals.
+- `./gradlew runClientGameTest jar -PcombatTests -PwithoutModMenu` passed all **three combat client checks** and produced `build/libs/sylvyespvphud-1.0.0.jar`. The new `combatTests` property selects HUD/combat client checks without running unrelated client suites.
+- Deterministic checks exercise 100/300/800 ms delays, a pending smash followed by weak swings, ordered/ambiguous confirmations, expiry and capacity limits, quick shield raises, activation delay, stale active flags, partial blocks with snapshotted armor, sounds/equipment in either order, duplicate/coalesced wear, and actual movement packet history while rendering trails the server.
+- Checks also cover measured Unbreaking wear, Reported fallback and late corrections without timer refresh, shield repair/replacement, break/removal order, another attacker, death, disconnect, disabled shield displays, off-ray spear snapshots, and delayed confirmations during a new fall.
+- The integrated server checks use real vanilla block, equipment, silent durability, spear jab/charge, and break packets. Test targets resist knockback so the confirmation wait does not move them outside the controlled attack range.
+- Public multiplayer servers and custom combat plugins have not been playtested. Server events have no client swing identifier or exact damage amount; ambiguous attribution is withheld, and Calculated values remain estimates.

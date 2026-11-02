@@ -22,3 +22,18 @@ fabricApi {
         enableClientGameTests = true
     }
 }
+
+// Select only combat client checks when investigating packet timing and attribution.
+tasks.named('processGametestResources') {
+    def combatTests = providers.gradleProperty('combatTests').isPresent()
+    inputs.property('combatTests', combatTests)
+    if (combatTests) filesMatching('fabric.mod.json') {
+        filter { line ->
+            def json = new groovy.json.JsonSlurper().parseText(line)
+            json.entrypoints['fabric-client-gametest'] = json.entrypoints['fabric-client-gametest'].findAll {
+                it.endsWith('HudSmokeTest') || it.endsWith('ShieldDamageSmokeTest') || it.endsWith('ShieldDurabilitySmokeTest')
+            }
+            groovy.json.JsonOutput.toJson(json)
+        }
+    }
+}

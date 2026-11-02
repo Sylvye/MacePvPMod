@@ -14,6 +14,7 @@ public final class HudSmokeTest implements FabricClientGameTest {
         try (var world = context.worldBuilder().create()) {
             world.getConnection().waitForChunksRender();
             context.runOnClient(mc -> {
+              try(var clock=new CombatTestClock()) {
                 var p = mc.player;
                 var defaults = PitchConfig.defaults();
                 var vectorDefaults = VectorsConfig.defaults();
@@ -51,29 +52,32 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 check(!DamageHud.showFall(1.5), "Threshold must be strictly above 1.5");
                 check(DamageHud.showFall(1.51), "Fall distance should appear above threshold");
                 check(!DamageHud.showFall(0), "Reset fall distance should hide");
-                DamageHud.tick(mc);
+                clock.tick(mc);
                 var zombie = new net.minecraft.world.entity.monster.zombie.Zombie(mc.level);
-                zombie.setId(2000000); zombie.setHealth(20); mc.level.addEntity(zombie);
+                zombie.setId(2000000); zombie.setHealth(20); zombie.setPos(p.getX(),p.getY(),p.getZ()+2); mc.level.addEntity(zombie);
                 p.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.MACE));
                 DamageHud.attacked(zombie);
                 zombie.setHealth(12);
-                DamageHud.tick(mc);
+                clock.tick(mc);
                 check(DamageHud.visibleHit().isEmpty(), "Unconfirmed health loss must not display");
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
-                DamageHud.tick(mc);
+                clock.settle(mc);
+                clock.tick(mc);
                 check(DamageHud.visibleHit().equals("8.0 damage"), "Confirmed health delta must display");
-                for (int tick = 0; tick < 60; tick++) DamageHud.tick(mc);
+                for (int tick = 0; tick < 60; tick++) clock.tick(mc);
                 check(DamageHud.visibleHit().isEmpty(), "Hit display should expire");
                 DamageHud.attacked(zombie);
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
-                for (int tick = 0; tick < 20; tick++) DamageHud.tick(mc);
+                clock.settle(mc);
+                for (int tick = 0; tick < 20; tick++) clock.tick(mc);
                 check(!DamageHud.visibleHit().isEmpty() && !DamageHud.visibleHit().equals("Damage unavailable"),
                         "Confirmed hits without a health update must use the calculated fallback");
-                for (int tick = 0; tick < 60; tick++) DamageHud.tick(mc);
+                for (int tick = 0; tick < 60; tick++) clock.tick(mc);
                 p.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STICK));
                 DamageHud.attacked(zombie); zombie.setHealth(10);
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
-                DamageHud.tick(mc);
+                clock.settle(mc);
+                clock.tick(mc);
                 check(DamageHud.visibleHit().isEmpty(), "Non-mace attacks must not display");
                 try { SylvyesPvPHud.DAMAGE_CONFIG.save(new DamageConfig(1, true, 0xffffff, 1, 0, 14, true, 0xff6666, 1, 0, 28, 3, true, "{blocks} blocks", "{damage} damage / {blocks} blocks")); }
                 catch (java.io.IOException e) { throw new RuntimeException(e); }
@@ -110,38 +114,39 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 check(Math.abs(MaceDamageCalculator.atAttack(p) - base) < .001, "Breach must not change raw damage");
                 p.setItemSlot(EquipmentSlot.MAINHAND, dense);
                 DamageHud.attacked(zombie);
-                DamageHud.tick(mc);
+                clock.tick(mc);
                 check(DamageHud.visibleHit().isEmpty(), "Calculated attacks must still be confirmed");
                 mc.getConnection().handleDamageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie, p.damageSources().playerAttack(p)));
+                clock.settle(mc);
                 check(p.fallDistance == 0, "A confirmed mace smash must reset client fall distance");
                 p.setItemSlot(EquipmentSlot.MAINHAND, plain);
-                DamageHud.tick(mc);
+                clock.tick(mc);
                 check(DamageHud.visibleHit().equals(String.format(java.util.Locale.ROOT, "%.1f damage / 8.0 blocks", expected)),
                         "Calculated damage must use attack-time fall/enchantment snapshot without health loss");
                 check(!DamageHud.visibleHitCritical(),"A falling sprint attack must not be marked critical");
-                for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
+                for(int tick=0;tick<60;tick++)clock.tick(mc);
                 p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));
                 p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH,200,0));
                 p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS,200,0));
-                p.setDeltaMovement(0,0,3);DamageHud.tick(mc);
+                p.setDeltaMovement(0,0,3);p.setXRot(0);p.setYRot(0);clock.tick(mc);
                 var piercing=p.getMainHandItem().get(net.minecraft.core.component.DataComponents.PIERCING_WEAPON);
                 double jabDamage=MaceDamageCalculator.effectiveAttackDamage(p)
                         +MaceDamageCalculator.enchantmentBonus(p.getMainHandItem(),zombie);
                 DamageHud.spearJab(piercing);
                 DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
                 DamageHud.spearJab(piercing);
-                DamageHud.tick(mc);
+                clock.settle(mc);
                 check(!DamageHud.visibleHit().isEmpty(),"A newer prediction must not replace a confirmed spear hit");
                 check(Math.abs(DamageHud.visibleHitAmount()-jabDamage)<.001,"A spear jab must not inherit velocity damage");
                 check(!DamageHud.visibleHitCritical(),"Spear damage must never be marked critical");
                 p.removeEffect(net.minecraft.world.effect.MobEffects.STRENGTH);p.removeEffect(net.minecraft.world.effect.MobEffects.WEAKNESS);
-                for(int tick=0;tick<60;tick++)DamageHud.tick(mc);
+                for(int tick=0;tick<60;tick++)clock.tick(mc);
                 AttributeSwaps.endTick();p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.MACE));
-                p.setSprinting(false);p.setOnGround(false);p.fallDistance=1;
+                CombatTestClock.charge(mc);p.setSprinting(false);p.setOnGround(false);p.fallDistance=1;
                 DamageHud.attacked(zombie);
                 DamageHud.damageEvent(new net.minecraft.network.protocol.game.ClientboundDamageEventPacket(zombie,p.damageSources().playerAttack(p)));
-                DamageHud.tick(mc);
-                check(DamageHud.visibleHitCritical(),"A confirmed full-cooldown vanilla critical hit must be marked critical");
+                clock.settle(mc);
+                check(DamageHud.visibleHitCritical(),"A confirmed full-cooldown vanilla critical hit must be marked critical: hit="+DamageHud.visibleHit()+", pending="+DamageHud.HISTORY.entries().stream().map(e->e.value.type+":"+e.value.critical+":"+e.value.raw).toList());
                 p.setSprinting(false);
                 try { SylvyesPvPHud.DAMAGE_CONFIG.save(DamageConfig.defaults()); }
                 catch (java.io.IOException e) { throw new RuntimeException(e); }
@@ -176,6 +181,7 @@ public final class HudSmokeTest implements FabricClientGameTest {
                 p.setOnGround(true); check(!PitchHud.shouldRender(mc, defaults), "Landing should hide guide"); p.setOnGround(false);
                 mc.gui.setScreen(new SettingsScreen(null)); check(!PitchHud.shouldRender(mc, defaults), "Menus should hide guide"); mc.gui.setScreen(null);
                 p.setHealth(0); check(!PitchHud.shouldRender(mc, defaults), "Dead players should not see guide"); p.setHealth(20);
+              }
             });
             context.takeScreenshot("gliding-pitch-40");
             for (int scale : new int[]{1, 2, 3}) {

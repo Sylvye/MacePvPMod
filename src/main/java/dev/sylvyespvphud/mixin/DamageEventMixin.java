@@ -30,6 +30,19 @@ public abstract class DamageEventMixin {
         // This handler may first be called on the network thread. Only inspect world state on the client thread.
         if(Minecraft.getInstance().isSameThread())dev.sylvyespvphud.ShieldDamageEvents.equipment(packet);
     }
+    @Inject(method = "handleMoveEntity", at = @At("TAIL"))
+    private void sylvyespvphud$entityMoved(net.minecraft.network.protocol.game.ClientboundMoveEntityPacket packet, CallbackInfo ci) {
+        var level=Minecraft.getInstance().level;var entity=level==null?null:packet.getEntity(level);
+        if(entity!=null)DamageHud.entityMoved(entity.getId());
+    }
+    @Inject(method = "handleEntityPositionSync", at = @At("TAIL"))
+    private void sylvyespvphud$entityPosition(net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket packet, CallbackInfo ci) {
+        DamageHud.entityMoved(packet.id());
+    }
+    @Inject(method = "handleTeleportEntity", at = @At("TAIL"))
+    private void sylvyespvphud$entityTeleport(net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket packet, CallbackInfo ci) {
+        DamageHud.entityMoved(packet.id());
+    }
     @Inject(method = "handleMovePlayer", at = @At("TAIL"))
     private void sylvyespvphud$positionReset(net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
         var player = Minecraft.getInstance().player;

@@ -25,163 +25,95 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BlocksAttacks;
 import net.minecraft.world.item.enchantment.Enchantments;
 
-/** Focused client state checks plus actual vanilla server block/break packets. */
+/** Durability measurement, late corrections, and actual vanilla server packets. */
 public final class ShieldDurabilitySmokeTest implements FabricClientGameTest {
     private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}
     private static void near(double expected,double actual,String message){check(Math.abs(expected-actual)<.001,message+": expected "+expected+", got "+actual);}
-    private static ItemStack shield(double factor){
-        var stack=new ItemStack(Items.SHIELD);var b=stack.get(DataComponents.BLOCKS_ATTACKS);
-        stack.set(DataComponents.BLOCKS_ATTACKS,new BlocksAttacks(0,b.disableCooldownScale(),List.of(new BlocksAttacks.DamageReduction(90,Optional.empty(),0,(float)factor)),b.itemDamage(),b.bypassedBy(),b.blockSound(),b.disableSound()));
-        return stack;
-    }
-    private static void configure(boolean gear){
+    private static ItemStack shield(double factor){return ShieldDamageSmokeTest.shield((float)factor);}
+    private static void configure(boolean gear) {
+        var mc=Minecraft.getInstance();CombatTestClock.reset(mc);
         var gson=new com.google.gson.Gson();var json=gson.toJsonTree(DamageConfig.defaults()).getAsJsonObject();
         json.addProperty("shieldTrackerEnabled",true);json.addProperty("hitShieldEnabled",true);
         json.addProperty("trackerEnabled",false);json.addProperty("hitSeconds",1);json.addProperty("calculatedDamage",true);json.addProperty("useEnemyGear",gear);
         SylvyesPvPHud.DAMAGE_CONFIG.activate(gson.fromJson(json,DamageConfig.class));
-        ShieldDamageHud.reset();
     }
-    private static class Target extends RemotePlayer {
-        Target(net.minecraft.client.multiplayer.ClientLevel level){super(level,new GameProfile(UUID.randomUUID(),"ShieldTest"));}
-        @Override public void startUsingItem(InteractionHand hand){setLivingEntityFlag(2,hand==InteractionHand.OFF_HAND);setLivingEntityFlag(1,true);}
-        @Override public void stopUsingItem(){super.stopUsingItem();setLivingEntityFlag(1,false);}
-    }
-    private static void sound(Minecraft mc,Target target){
-        var sound=target.getOffhandItem().get(DataComponents.BLOCKS_ATTACKS).blockSound().orElseThrow();
-        mc.getConnection().handleSoundEvent(new ClientboundSoundPacket(sound,target.getSoundSource(),target.getX(),target.getY(),target.getZ(),1,1,0));
-    }
-    private static void equipment(Minecraft mc,Target target,int damage){
-        ItemStack next=target.getOffhandItem().copy();next.setDamageValue(damage);
-        mc.getConnection().handleSetEquipment(new ClientboundSetEquipmentPacket(target.getId(),List.of(com.mojang.datafixers.util.Pair.of(EquipmentSlot.OFFHAND,next))));
-    }
-    private static void configureReported(Minecraft mc,Target target,boolean gear) {
-        configure(gear);
-        var gson=new com.google.gson.Gson();var json=gson.toJsonTree(SylvyesPvPHud.DAMAGE_CONFIG.current()).getAsJsonObject();
+    private static void reported(Minecraft mc,ShieldDamageSmokeTest.Target target) {
+        configure(false);var gson=new com.google.gson.Gson();var json=gson.toJsonTree(SylvyesPvPHud.DAMAGE_CONFIG.current()).getAsJsonObject();
         json.addProperty("calculatedDamage",false);SylvyesPvPHud.DAMAGE_CONFIG.activate(gson.fromJson(json,DamageConfig.class));
-        mc.player.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.MACE));mc.player.fallDistance=3;
-        target.stopUsingItem();target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);
+        ShieldDamageSmokeTest.fresh(target);mc.player.fallDistance=3;
     }
-    private static void attack(Minecraft mc,Target target) {mc.player.fallDistance=3;DamageHud.attacked(target);}
-    private static void reportedChecks(Minecraft mc,Target target) {
-        configureReported(mc,target,true);
-        target.stopUsingItem();var enchanted=shield(1);enchanted.enchant(mc.level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(Enchantments.UNBREAKING),3);
-        target.setItemSlot(EquipmentSlot.OFFHAND,enchanted);target.startUsingItem(InteractionHand.OFF_HAND);
-        attack(mc,target);sound(mc,target);near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Reported sound must wait for measurement");
-        equipment(mc,target,3);near(3,ShieldDamageHud.TRACKER.total(target.getUUID()),"Reported uses actual Unbreaking loss");near(3,DamageHud.visibleHitAmount(),"Reported hit uses measured amount without further Unbreaking division");
-        equipment(mc,target,3);near(3,ShieldDamageHud.TRACKER.total(target.getUUID()),"Duplicate equipment adds nothing");
-        attack(mc,target);equipment(mc,target,8);sound(mc,target);near(8,ShieldDamageHud.TRACKER.total(target.getUUID()),"Equipment before sound is counted once");
-        attack(mc,target);sound(mc,target);attack(mc,target);sound(mc,target);equipment(mc,target,11);
-        near(11,ShieldDamageHud.TRACKER.total(target.getUUID()),"Coalesced actual loss counts once");near(11,ShieldDamageHud.HITS.total(target.getUUID()),"Both displays receive the same measured batch");
-        equipment(mc,target,12);near(11,ShieldDamageHud.TRACKER.total(target.getUUID()),"No new local attack means unrelated wear adds nothing");
-
-        configureReported(mc,target,false);
-        var weapon=mc.player.getMainHandItem();var savedShield=ShieldDamageCalculator.capture(target,weapon.getDamageSource(mc.player));
-        ShieldDamageHud.prepare(target,savedShield,2,weapon,new Object(),true);sound(mc,target);equipment(mc,target,4);
-        near(4,ShieldDamageHud.TRACKER.total(target.getUUID()),"Reported measurement is accepted even when predicted durability cost is zero");
-
-        configureReported(mc,target,false);attack(mc,target);sound(mc,target);
-        double fallback=ShieldDamageCalculator.capture(target,mc.player.getMainHandItem().getDamageSource(mc.player)).durability(MaceDamageCalculator.atAttack(mc.player,target),false);
-        for(int i=0;i<39;i++)ShieldDamageHud.tick();near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Reported waits full 40 ticks");
-        ShieldDamageHud.tick();near(fallback,ShieldDamageHud.TRACKER.total(target.getUUID()),"Missing data uses calculated fallback");
-        for(int i=0;i<5;i++)ShieldDamageHud.tick();equipment(mc,target,2);
-        near(2,ShieldDamageHud.TRACKER.total(target.getUUID()),"Late measurement replaces fallback");near(2,DamageHud.visibleHitAmount(),"Late measurement corrects hit field");
-        for(int i=0;i<15;i++)ShieldDamageHud.tick();check(!ShieldDamageHud.hitVisible(),"Correction must not extend display timer");
-
-        configureReported(mc,target,false);attack(mc,target);sound(mc,target);
-        for(int i=0;i<60;i++)ShieldDamageHud.tick();check(!ShieldDamageHud.hitVisible(),"Fallback hit expires");
-        equipment(mc,target,3);near(3,ShieldDamageHud.TRACKER.total(target.getUUID()),"Correction survives hit expiry while tracker storage is active");check(!ShieldDamageHud.hitVisible(),"Correction cannot resurrect expired hit display");
-
-        configureReported(mc,target,false);attack(mc,target);sound(mc,target);
-        for(int i=0;i<40;i++)ShieldDamageHud.tick();ShieldDamageHud.healthHit(target.getUUID());equipment(mc,target,2);
-        near(2,ShieldDamageHud.TRACKER.total(target.getUUID()),"Health-hit reset does not lose tracker correction");check(!ShieldDamageHud.hitVisible(),"Late correction cannot revive health-reset streak");
-
-        configureReported(mc,target,false);target.getOffhandItem().setDamageValue(10);attack(mc,target);sound(mc,target);equipment(mc,target,5);
-        for(int i=0;i<41;i++)ShieldDamageHud.tick();near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Repair is not damage and cancels stale fallback");
-        configureReported(mc,target,false);attack(mc,target);sound(mc,target);
-        var replacement=shield(1);replacement.set(DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("Replacement"));
-        mc.getConnection().handleSetEquipment(new ClientboundSetEquipmentPacket(target.getId(),List.of(com.mojang.datafixers.util.Pair.of(EquipmentSlot.OFFHAND,replacement))));
-        for(int i=0;i<41;i++)ShieldDamageHud.tick();near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Shield swap cancels old pending measurement");
-
-        configureReported(mc,target,false);target.getOffhandItem().setDamageValue(target.getOffhandItem().getMaxDamage()-2);attack(mc,target);sound(mc,target);
-        mc.getConnection().handleEntityEvent(new ClientboundEntityEventPacket(target,(byte)48));
-        near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Reported break resets storage");near(2,ShieldDamageHud.TRACKER.amount(),"Reported break uses server-known remaining durability");near(2,DamageHud.visibleHitAmount(),"Reported break final hit amount");
-        mc.getConnection().handleSetEquipment(new ClientboundSetEquipmentPacket(target.getId(),List.of(com.mojang.datafixers.util.Pair.of(EquipmentSlot.OFFHAND,ItemStack.EMPTY))));
-        near(2,ShieldDamageHud.TRACKER.amount(),"Break and removal cannot double count");
-        target.stopUsingItem();target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);attack(mc,target);equipment(mc,target,4);
-        near(4,ShieldDamageHud.TRACKER.total(target.getUUID()),"Replacement shield starts a fresh measured sum");
-        configureReported(mc,target,false);target.getOffhandItem().setDamageValue(target.getOffhandItem().getMaxDamage()-3);attack(mc,target);sound(mc,target);
-        mc.getConnection().handleSetEquipment(new ClientboundSetEquipmentPacket(target.getId(),List.of(com.mojang.datafixers.util.Pair.of(EquipmentSlot.OFFHAND,ItemStack.EMPTY))));
-        mc.getConnection().handleEntityEvent(new ClientboundEntityEventPacket(target,(byte)48));near(3,ShieldDamageHud.TRACKER.amount(),"Removal-before-break retains server durability baseline");
-    }
-    @Override public void runTest(ClientGameTestContext context){
+    private static void attack(Minecraft mc,ShieldDamageSmokeTest.Target target){mc.player.fallDistance=3;DamageHud.attacked(target);}
+    private static void sound(Minecraft mc,ShieldDamageSmokeTest.Target target){ShieldDamageSmokeTest.sound(mc,target);}
+    private static void equipment(Minecraft mc,ShieldDamageSmokeTest.Target target,int damage){ShieldDamageSmokeTest.equip(mc,target,damage);}
+    @Override public void runTest(ClientGameTestContext context) {
         var original=new AtomicReference<DamageConfig>();
-        try(var world=context.worldBuilder().create()){
+        try(var world=context.worldBuilder().create()) {
             world.getConnection().waitForChunksRender();
             context.runOnClient(mc->{
-                original.set(SylvyesPvPHud.DAMAGE_CONFIG.current());DamageHud.tick(mc);configure(false);
-                var p=mc.player;p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.MACE));p.setSprinting(true);p.fallDistance=3;AttributeSwaps.endTick();
-                var target=new Target(mc.level);target.setId(2000020);target.setPos(p.getX(),p.getY(),p.getZ()+2);target.setYHeadRot(180);
-                target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);mc.level.addEntity(target);
-                var snapshot=ShieldDamageCalculator.capture(target,p.getMainHandItem().getDamageSource(p));
-                near(11,snapshot.durability(10,false),"Vanilla shield durability function");
-                near(0,snapshot.durability(2,false),"Below durability threshold");
+              original.set(SylvyesPvPHud.DAMAGE_CONFIG.current());DamageHud.tick(mc);
+              try(var clock=new CombatTestClock()) {
+                var target=new ShieldDamageSmokeTest.Target(mc.level);target.setId(2000020);
+                target.setPos(mc.player.getX(),mc.player.getY(),mc.player.getZ()+2);mc.level.addEntity(target);
+                reported(mc,target);
                 var enchanted=shield(1);enchanted.enchant(mc.level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(Enchantments.UNBREAKING),3);
-                target.stopUsingItem();target.setItemSlot(EquipmentSlot.OFFHAND,enchanted);target.startUsingItem(InteractionHand.OFF_HAND);
-                near(11/4.0,ShieldDamageCalculator.capture(target,p.getMainHandItem().getDamageSource(p)).durability(10,true),"Visible Unbreaking mean");
-                target.stopUsingItem();target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);
-                double raw=MaceDamageCalculator.atAttack(p,target);double cost=ShieldDamageCalculator.capture(target,p.getMainHandItem().getDamageSource(p)).durability(raw,false);check(cost>0,"Mace cost must be positive");
-                DamageHud.attacked(target);near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Unconfirmed attack");sound(mc,target);
-                near(cost,ShieldDamageHud.TRACKER.total(target.getUUID()),"Block sound must confirm shield damage");near(cost,DamageHud.visibleHitAmount(),"Hit shield field");
-                equipment(mc,target,(int)cost);near(cost,ShieldDamageHud.TRACKER.total(target.getUUID()),"Sound plus equipment must not double count");
-                DamageHud.attacked(target);equipment(mc,target,(int)cost*2);sound(mc,target);
-                near(cost*2,ShieldDamageHud.TRACKER.total(target.getUUID()),"Equipment before sound must not double count");
-                DamageHud.attacked(target);DamageHud.attacked(target);equipment(mc,target,(int)cost*4);
-                near(cost*4,ShieldDamageHud.TRACKER.total(target.getUUID()),"Coalesced silent spam hits");
-                for(int i=0;i<19;i++)ShieldDamageHud.tick();
-                DamageHud.attacked(target);equipment(mc,target,(int)cost*5);
-                near(cost*5,DamageHud.visibleHitAmount(),"Spam refreshes hit sum");
-                for(int i=0;i<20;i++)ShieldDamageHud.tick();check(!ShieldDamageHud.hitVisible(),"Hit sum times out");
-                DamageHud.attacked(target);equipment(mc,target,(int)cost*6);near(cost,DamageHud.visibleHitAmount(),"New streak after timeout");
-                DamageHud.attacked(target);mc.getConnection().handleEntityEvent(new ClientboundEntityEventPacket(target,(byte)48));
-                near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Break resets stored tracker sum");near(cost*7,ShieldDamageHud.TRACKER.amount(),"Break retains final tracker number");near(cost*2,DamageHud.visibleHitAmount(),"Break retains final hit number");
-                target.stopUsingItem();target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);DamageHud.attacked(target);equipment(mc,target,(int)cost);
-                near(cost,ShieldDamageHud.TRACKER.total(target.getUUID()),"Replacement shield first silent hit starts a fresh total");near(cost,DamageHud.visibleHitAmount(),"Replacement shield first hit starts a fresh streak");
-                target.stopUsingItem();DamageHud.attacked(target);DamageHud.damageEvent(new ClientboundDamageEventPacket(target,p.getMainHandItem().getDamageSource(p)));DamageHud.tick(mc);
-                check(!ShieldDamageHud.hitVisible(),"Health damage ends shield streak");
-                p.fallDistance=3;target.setItemSlot(EquipmentSlot.OFFHAND,shield(.5));target.startUsingItem(InteractionHand.OFF_HAND);
-                DamageHud.attacked(target);sound(mc,target);DamageHud.tick(mc);check(!ShieldDamageHud.hitVisible(),"Partial block prioritizes health");check(ShieldDamageHud.TRACKER.total(target.getUUID())>0,"Partial block contributes shield cost");
-                ShieldDamageHud.reset();
-                p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.DIAMOND_SWORD));DamageHud.attacked(target);sound(mc,target);near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Swords excluded");
-                configure(false);p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));p.setXRot(0);p.setYRot(0);p.setDeltaMovement(0,0,3);p.fallDistance=0;
-                target.stopUsingItem();target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);
-                DamageHud.spearJab(p.getMainHandItem().get(DataComponents.PIERCING_WEAPON));sound(mc,target);
-                check(ShieldDamageHud.TRACKER.total(target.getUUID())>0,"Spear jab shield confirmation");
-                ShieldDamageHud.reset();
-                var weapon=p.getMainHandItem();var kinetic=weapon.get(DataComponents.KINETIC_WEAPON);
-                weapon.set(DataComponents.KINETIC_WEAPON,new net.minecraft.world.item.component.KineticWeapon(kinetic.contactCooldownTicks(),0,kinetic.dismountConditions(),kinetic.knockbackConditions(),Optional.of(new net.minecraft.world.item.component.KineticWeapon.Condition(1000,0,0)),kinetic.forwardMovement(),kinetic.damageMultiplier(),kinetic.sound(),kinetic.hitSound()));
-                double base=p.getAttributeBaseValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);p.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE).setBaseValue(10);
-                p.startUsingItem(InteractionHand.MAIN_HAND);DamageHud.tick(mc);sound(mc,target);
-                check(ShieldDamageHud.TRACKER.total(target.getUUID())>0,"Spear charge shield confirmation");p.stopUsingItem();p.setDeltaMovement(0,0,0);p.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE).setBaseValue(base);
-                ShieldDamageHud.reset();p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.MACE));p.fallDistance=3;
-                DamageHud.attacked(target);DamageHud.damageEvent(new ClientboundDamageEventPacket(target,p.getMainHandItem().getDamageSource(target)));equipment(mc,target,40);
-                near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Other attacker must invalidate unmatched local candidate");
-                for(int i=0;i<10;i++)DamageHud.tick(mc);
-                ShieldDamageHud.reset();var gson=new com.google.gson.Gson();var reported=gson.toJsonTree(SylvyesPvPHud.DAMAGE_CONFIG.current()).getAsJsonObject();reported.addProperty("calculatedDamage",false);SylvyesPvPHud.DAMAGE_CONFIG.activate(gson.fromJson(reported,DamageConfig.class));
-                target.stopUsingItem();p.fallDistance=3;DamageHud.attacked(target);DamageHud.damageEvent(new ClientboundDamageEventPacket(target,p.getMainHandItem().getDamageSource(p)));
-                p.fallDistance=3;target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);DamageHud.attacked(target);sound(mc,target);
-                equipment(mc,target,3);
-                double newShieldSum=ShieldDamageHud.HITS.total(target.getUUID());check(newShieldSum>0,"Shield streak after reported health hit");
-                for(int i=0;i<10;i++)DamageHud.tick(mc);
-                near(newShieldSum,ShieldDamageHud.HITS.total(target.getUUID()),"Delayed health result must not clear a newer shield streak");check(ShieldDamageHud.hitVisible(),"Delayed health result must not replace a newer shield display");
-                reportedChecks(mc,target);
+                target.setItemSlot(EquipmentSlot.OFFHAND,enchanted);
+                attack(mc,target);sound(mc,target);clock.settle(mc);
+                near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Reported sound waits for measurement");
+                equipment(mc,target,3);clock.settle(mc);
+                near(3,ShieldDamageHud.TRACKER.total(target.getUUID()),"Actual Unbreaking wear is not divided twice");
+                near(3,DamageHud.visibleHitAmount(),"Reported hit displays measured wear");
+                equipment(mc,target,3);clock.settle(mc);near(3,ShieldDamageHud.TRACKER.total(target.getUUID()),"Duplicate equipment adds nothing");
+                attack(mc,target);equipment(mc,target,8);sound(mc,target);clock.settle(mc);
+                near(8,ShieldDamageHud.TRACKER.total(target.getUUID()),"Equipment before sound counts once");
+                attack(mc,target);sound(mc,target);attack(mc,target);sound(mc,target);equipment(mc,target,11);clock.settle(mc);
+                near(11,ShieldDamageHud.TRACKER.total(target.getUUID()),"Coalesced reported wear counts once");
+                equipment(mc,target,12);clock.settle(mc);near(11,ShieldDamageHud.TRACKER.total(target.getUUID()),"Unmatched wear adds nothing");
+
+                reported(mc,target);attack(mc,target);sound(mc,target);
+                double fallback=ShieldDamageCalculator.potential(target,mc.player.getMainHandItem().getDamageSource(mc.player)).getFirst().confirmed()
+                        .durability(MaceDamageCalculator.atAttack(mc.player,target),false);
+                clock.advance(1999);DamageHud.tick(mc);near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Reported waits full retention window");
+                clock.advance(1);DamageHud.tick(mc);near(fallback,ShieldDamageHud.TRACKER.total(target.getUUID()),"Missing wear falls back after confirmation window");
+                for(int i=0;i<5;i++)clock.tick(mc);equipment(mc,target,2);
+                near(2,ShieldDamageHud.TRACKER.total(target.getUUID()),"Late measurement replaces fallback");near(2,DamageHud.visibleHitAmount(),"Late correction adjusts existing display");
+                for(int i=0;i<15;i++)clock.tick(mc);check(!ShieldDamageHud.hitVisible(),"Correction does not refresh display timer");
+                reported(mc,target);attack(mc,target);sound(mc,target);clock.settle(mc);clock.advance(1500);DamageHud.tick(mc);
+                ShieldDamageHud.healthHit(target.getUUID());equipment(mc,target,2);
+                near(2,ShieldDamageHud.TRACKER.total(target.getUUID()),"Health display reset preserves tracker correction");check(!ShieldDamageHud.hitVisible(),"Correction cannot revive dismissed streak");
+
+                reported(mc,target);target.getOffhandItem().setDamageValue(10);attack(mc,target);sound(mc,target);equipment(mc,target,5);clock.advance(2500);DamageHud.tick(mc);
+                near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Repair cancels stale fallback");
+                reported(mc,target);attack(mc,target);sound(mc,target);
+                var replacement=shield(1);replacement.set(DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("Replacement"));
+                mc.getConnection().handleSetEquipment(new ClientboundSetEquipmentPacket(target.getId(),List.of(com.mojang.datafixers.util.Pair.of(EquipmentSlot.OFFHAND,replacement))));
+                clock.advance(2500);DamageHud.tick(mc);near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Shield swap cancels stale fallback");
+
+                for(boolean removalFirst:new boolean[]{false,true}) {
+                    reported(mc,target);target.getOffhandItem().setDamageValue(target.getOffhandItem().getMaxDamage()-2);attack(mc,target);sound(mc,target);
+                    if(removalFirst)mc.getConnection().handleSetEquipment(new ClientboundSetEquipmentPacket(target.getId(),List.of(com.mojang.datafixers.util.Pair.of(EquipmentSlot.OFFHAND,ItemStack.EMPTY))));
+                    mc.getConnection().handleEntityEvent(new ClientboundEntityEventPacket(target,(byte)48));
+                    if(!removalFirst)mc.getConnection().handleSetEquipment(new ClientboundSetEquipmentPacket(target.getId(),List.of(com.mojang.datafixers.util.Pair.of(EquipmentSlot.OFFHAND,ItemStack.EMPTY))));
+                    clock.settle(mc);near(0,ShieldDamageHud.TRACKER.total(target.getUUID()),"Break resets stored total");near(2,ShieldDamageHud.TRACKER.amount(),"Break retains measured remaining durability");
+                    target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));attack(mc,target);equipment(mc,target,4);clock.settle(mc);
+                    near(4,ShieldDamageHud.TRACKER.total(target.getUUID()),"Replacement shield starts a fresh total");
+                }
+                configure(false);ShieldDamageSmokeTest.fresh(target);mc.player.fallDistance=3;
+                double raw=MaceDamageCalculator.atAttack(mc.player,target);
+                double cost=ShieldDamageCalculator.potential(target,mc.player.getMainHandItem().getDamageSource(mc.player)).getFirst().confirmed().durability(raw,false);
+                attack(mc,target);attack(mc,target);equipment(mc,target,(int)(cost*2));clock.settle(mc);
+                near(cost*2,ShieldDamageHud.TRACKER.total(target.getUUID()),"Identical silent blocks can share one equipment update");
+
+                configure(true);ShieldDamageSmokeTest.fresh(target);target.setItemSlot(EquipmentSlot.OFFHAND,shield(.5));
+                target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR).setBaseValue(20);
+                target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS).setBaseValue(8);
+                mc.player.fallDistance=3;raw=MaceDamageCalculator.atAttack(mc.player,target);
+                double expected=MaceDamageCalculator.afterGear(raw*.5,mc.player.getMainHandItem(),target);
+                attack(mc,target);target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR).setBaseValue(0);sound(mc,target);clock.settle(mc);
+                near(expected,DamageHud.visibleHitAmount(),"Partial block applies snapshotted gear after shield reduction");
                 mc.level.removeEntity(target.getId(),Entity.RemovalReason.DISCARDED);
-                var draft=new SettingsSession();var style=draft.hud.shieldTracker();check(HudPreview.centered(style)!=null,"Shield HUD preview style");
+                CombatTestClock.reset(mc);
+              }
             });
-            context.setScreen(()->new HudPlacementScreen(new SettingsScreen(null),new SettingsSession(),9));
-            context.waitTicks(2);
-            context.runOnClient(mc->{var screen=(HudPlacementScreen)mc.gui.screen();check(screen.currentBounds()!=null&&screen.currentBounds().width()>0,"Shield HUD placement preview must render");});
-            context.takeScreenshot("shield-tracker-placement");
-            context.runOnClient(mc->mc.gui.setScreen(null));
             // A real server player supplies vanilla onBlocked sounds, item damage sync, and break events.
             var serverTarget=new AtomicReference<ServerPlayer>();
             world.getServer().runOnServer(server->{
@@ -192,6 +124,7 @@ public final class ShieldDurabilitySmokeTest implements FabricClientGameTest {
                 };
                 target.connection=new ServerGamePacketListenerImpl(server,new Connection(PacketFlow.SERVERBOUND),target,CommonListenerCookie.createInitial(profile,false));
                 target.setPos(player.getX(),player.getY(),player.getZ()+2);target.setYRot(180);target.setYHeadRot(180);target.setNoGravity(true);
+                target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1);
                 target.setItemSlot(EquipmentSlot.OFFHAND,shield(1));target.startUsingItem(InteractionHand.OFF_HAND);
                 player.connection.send(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(target)));
                 server.overworld().addNewPlayer(target);serverTarget.set(target);
@@ -225,6 +158,7 @@ public final class ShieldDurabilitySmokeTest implements FabricClientGameTest {
                 weapon.set(DataComponents.KINETIC_WEAPON,new net.minecraft.world.item.component.KineticWeapon(kinetic.contactCooldownTicks(),0,kinetic.dismountConditions(),kinetic.knockbackConditions(),Optional.of(new net.minecraft.world.item.component.KineticWeapon.Condition(1000,0,0)),kinetic.forwardMovement(),kinetic.damageMultiplier(),kinetic.sound(),kinetic.hitSound()));
                 mc.player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE).setBaseValue(10);rawDamage.set(10.0);
                 mc.player.startUsingItem(InteractionHand.MAIN_HAND);DamageHud.tick(mc);mc.player.stopUsingItem();mc.player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE).setBaseValue(1);
+                check(DamageHud.HISTORY.entries().stream().anyMatch(e->e.value.target.getId()==serverTarget.get().getId()&&e.value.type==DamageWeapon.SPEAR),"Charge fixture must have predicted contact");
             });
             world.getServer().runOnServer(server->{var attacker=server.getPlayerList().getPlayers().getFirst();var target=serverTarget.get();target.invulnerableTime=20;target.hurtServer(server.overworld(),attacker.getMainHandItem().getDamageSource(attacker),rawDamage.get().floatValue());});
             context.waitFor(mc->ShieldDamageHud.TRACKER.total(serverTarget.get().getUUID())>beforeCharge);
@@ -238,6 +172,6 @@ public final class ShieldDurabilitySmokeTest implements FabricClientGameTest {
             context.waitFor(mc->ShieldDamageHud.TRACKER.total(serverTarget.get().getUUID())==0);
             context.runOnClient(mc->check(ShieldDamageHud.TRACKER.amount()>previous,"Actual break must retain final total"));
             world.getServer().runOnServer(server->{server.overworld().removePlayerImmediately(serverTarget.get(),Entity.RemovalReason.DISCARDED);});
-        }finally{context.runOnClient(mc->{ShieldDamageHud.reset();if(original.get()!=null)SylvyesPvPHud.DAMAGE_CONFIG.activate(original.get());});}
+        }finally{context.runOnClient(mc->{ShieldDamageHud.reset();DamageHud.clearPending();if(original.get()!=null)SylvyesPvPHud.DAMAGE_CONFIG.activate(original.get());});}
     }
 }
