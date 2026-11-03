@@ -62,10 +62,9 @@ final class ShieldDamageHud {
     }
     private static void cancel(Report r) {
         r.evidence.cancelled=true;
-        for(var entry:r.evidence.candidates)entry.cancelled=true;
     }
     static void blockSound(Holder<SoundEvent> sound,Vec3 position,Integer entityId) {
-        long now=CombatTiming.now();
+        long now=CombatTiming.now();DamageHud.HISTORY.expire(now);
         Predicate<ShieldDamageCalculator.Snapshot> defense=s->s.blocking().blockSound()
                 .map(block->block.value().location().equals(sound.value().location())).orElse(false);
         LivingEntity target=null;
@@ -97,6 +96,7 @@ final class ShieldDamageHud {
     }
     static void equipment(LivingEntity target,EquipmentSlot slot,ItemStack before,ItemStack after) {
         if(slot!=EquipmentSlot.MAINHAND&&slot!=EquipmentSlot.OFFHAND)return;
+        long now=CombatTiming.now();DamageHud.HISTORY.expire(now);
         var key=new ShieldKey(target.getUUID(),slot);
         serverShields.put(key,(after.isEmpty()?before:after).copy());
         if(!before.isDamageableItem()||after.isEmpty())return;
@@ -107,25 +107,20 @@ final class ShieldDamageHud {
             return;
         }
         if(loss<=0)return;
-        long now=CombatTiming.now();
         var batch=new ArrayList<Report>();
         for(var r:reports)if(r.target==target&&!r.equipmentSeen&&!r.evidence.cancelled&&r.matches(slot,before))batch.add(r);
         var possible=DamageHud.HISTORY.entries().stream().filter(e->!e.cancelled&&now<e.expires&&e.value.target==target&&e.value.contact&&e.value.shieldWeapon()
                 &&e.value.shields.stream().anyMatch(s->s.slot()==slot&&sameShield(s.shield(),before))).toList();
         int existing=(int)batch.stream().filter(r->r.attack==null).count();
         double budget=loss-batch.stream().mapToDouble(Report::weight).sum();
-        boolean equivalent=possible.stream().map(e->e.value.blockSignature()).distinct().count()<=1;
-        int count=0;
-        if(!possible.isEmpty()) {
-            var first=possible.getFirst().value;
-            var shield=first.shields.stream().filter(s->s.slot()==slot&&sameShield(s.shield(),before)).findFirst().orElseThrow().confirmed();
-            // Coalesced identical contacts may be inferred from wear. Different estimates require more evidence.
-            count=equivalent?(int)Math.ceil(Math.max(0,budget)/Math.max(1,shield.durability(first.raw,false))):batch.isEmpty()?1:0;
-            count=Math.min(count,Math.max(0,possible.size()-existing));
-        }
-        for(int i=0;i<count;i++) {
+        // Wear can confirm contacts with different cooldown/fall snapshots. Treat the packet's
+        // delta as one measured batch; predicted costs only apportion it, never gate measurement.
+        for(int i=existing;i<possible.size()&&budget>0;i++) {
+            var candidate=possible.get(i).value;
+            var shield=candidate.shields.stream().filter(s->s.slot()==slot&&sameShield(s.shield(),before)).findFirst().orElseThrow().confirmed();
             var r=create(target.getUUID(),s->s.slot()==slot&&sameShield(s.shield(),before),slot,now);
             if(r!=null)batch.add(r);
+            budget-=Math.max(1,shield.durability(candidate.raw,false));
         }
         if(batch.isEmpty())return;
         double weight=batch.stream().mapToDouble(Report::weight).sum(),left=loss;
@@ -157,7 +152,7 @@ final class ShieldDamageHud {
         for(var r:reports)if(r.broken&&!r.breakApplied&&r.attack!=null&&r.applied) {
             boolean waiting=reports.stream().anyMatch(other->other.target==r.target&&other.slot==r.slot&&other.broken&&!other.applied&&!other.evidence.cancelled);
             if(!waiting){TRACKER.broken(r.target.getUUID());HITS.broken(r.target.getUUID());
-                for(var other:reports)if(other.target==r.target&&other.slot==r.slot&&other.broken)other.breakApplied=true;}
+                for(var other:reports)if(other.target==r.target&&other.slot==r.slot&&other.broken){other.breakApplied=true;other.soundSeen=true;}}
         }
     }
     private static void record(Report r,double amount) {
@@ -180,7 +175,7 @@ final class ShieldDamageHud {
         var key=new ShieldKey(target.getUUID(),slot);
         ItemStack known=serverShields.getOrDefault(key,target.getItemBySlot(slot));
         if(known.get(net.minecraft.core.component.DataComponents.BLOCKS_ATTACKS)==null)return;
-        long now=CombatTiming.now();
+        long now=CombatTiming.now();DamageHud.HISTORY.expire(now);
         var batch=new ArrayList<Report>();
         for(var r:reports)if(r.target==target&&!r.evidence.cancelled&&!r.equipmentSeen&&r.matches(slot,known))batch.add(r);
         if(batch.isEmpty()) {

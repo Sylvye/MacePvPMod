@@ -185,7 +185,7 @@ public final class DamageHud {
             if(!entry.value.type.enabled(config)||entry.value.target.isRemoved())HISTORY.discard(entry.target);
             else entry.value.samplePosition(now);
         }
-        for(var result:HISTORY.resolve(now,CombatAttempt::healthSignature,CombatAttempt::blockSignature).stream()
+        for(var result:HISTORY.resolve(now).stream()
                 .sorted(java.util.Comparator.comparingLong(r->r.entry().value.sequence)).toList()) {
             if(result.evidence().kind==AttackHistory.Kind.BLOCK)ShieldDamageHud.resolved(result);
             else queueHealth(result.entry().value,result.entry().value.unblocked,result.evidence().received);

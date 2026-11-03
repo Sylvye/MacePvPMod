@@ -12,10 +12,11 @@ final class CombatTestClock implements AutoCloseable {
     void tick(Minecraft mc){advance(50);DamageHud.tick(mc);}
     void settle(Minecraft mc){advance(500);DamageHud.tick(mc);}
     @Override public void close(){CombatTiming.clock=previous;}
-    static void charge(Minecraft mc) {
+    static void charge(Minecraft mc) { cooldown(mc,100); }
+    static void cooldown(Minecraft mc,int ticks) {
         try {
             var ticker=net.minecraft.world.entity.LivingEntity.class.getDeclaredField("attackStrengthTicker");
-            ticker.setAccessible(true);ticker.setInt(mc.player,100);
+            ticker.setAccessible(true);ticker.setInt(mc.player,ticks);
         }catch(ReflectiveOperationException e){throw new AssertionError(e);}
     }
     static void reset(Minecraft mc) {

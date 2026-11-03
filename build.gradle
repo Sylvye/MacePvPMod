@@ -31,7 +31,7 @@ tasks.named('processGametestResources') {
         filter { line ->
             def json = new groovy.json.JsonSlurper().parseText(line)
             json.entrypoints['fabric-client-gametest'] = json.entrypoints['fabric-client-gametest'].findAll {
-                it.endsWith('HudSmokeTest') || it.endsWith('ShieldDamageSmokeTest') || it.endsWith('ShieldDurabilitySmokeTest')
+                it.endsWith('HudSmokeTest') || it.endsWith('ShieldDamageSmokeTest') || it.endsWith('ShieldDurabilitySmokeTest') || it.endsWith('SustainedCombatSmokeTest')
             }
             groovy.json.JsonOutput.toJson(json)
         }

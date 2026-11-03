@@ -87,10 +87,10 @@ public final class ShieldDamageSmokeTest implements FabricClientGameTest {
                 mc.getConnection().handleSoundEvent(new ClientboundSoundPacket(movementSound,target.getSoundSource(),intermediate.x,intermediate.y,intermediate.z,1,1,0));
                 clock.settle(mc);check(ShieldDamageHud.hitVisible(),"Intermediate server positions must survive packet coalescing and interpolation");
                 target.syncPacketPositionCodec(rendered.x,rendered.y,rendered.z);
-                configure(mc,true,true);fresh(target);p.fallDistance=8;DamageHud.attacked(target);
+                configure(mc,true,true);fresh(target);p.fallDistance=8;double savedSmash=MaceDamageCalculator.atAttack(p,target);DamageHud.attacked(target);
                 clock.advance(50);p.fallDistance=0;DamageHud.attacked(target);clock.advance(300);health(mc,target);clock.settle(mc);
-                check(DamageHud.visibleHit().isEmpty(),"Weak follow-up must not replace pending smash");
-                near(0,CumulativeDamageTracker.total(target.getUUID()),"Ambiguous confirmation changed total");
+                near(savedSmash,DamageHud.visibleHitAmount(),"Weak follow-up must not replace pending smash");
+                near(savedSmash,CumulativeDamageTracker.total(target.getUUID()),"Confirmed smash must not be suppressed by a weak follow-up");
                 health(mc,target);clock.settle(mc);check(CumulativeDamageTracker.total(target.getUUID())>20,"Two ordered confirmations should resolve both saved attacks");
 
                 for(boolean equipmentFirst:new boolean[]{false,true}) {
@@ -154,10 +154,11 @@ public final class ShieldDamageSmokeTest implements FabricClientGameTest {
                 p.removeEffect(net.minecraft.world.effect.MobEffects.STRENGTH);
 
                 configure(mc,true,true);fresh(target);p.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SPEAR));
+                double oldestJab=MaceDamageCalculator.effectiveAttackDamage(p);
                 DamageHud.spearJab(p.getMainHandItem().get(DataComponents.PIERCING_WEAPON));
                 p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH,200,0));
                 DamageHud.spearJab(p.getMainHandItem().get(DataComponents.PIERCING_WEAPON));health(mc,target);clock.settle(mc);
-                check(DamageHud.visibleHit().isEmpty(),"Different off-ray spear predictions cannot substitute the newest estimate");
+                near(oldestJab,DamageHud.visibleHitAmount(),"Different off-ray spear predictions use the oldest saved estimate");
                 p.removeEffect(net.minecraft.world.effect.MobEffects.STRENGTH);
                 configure(mc,true,true);fresh(target);DamageHud.attacked(target);clock.advance(6001);sound(mc,target);health(mc,target);clock.settle(mc);
                 check(DamageHud.visibleHit().isEmpty(),"Expired attacks cannot be revived");

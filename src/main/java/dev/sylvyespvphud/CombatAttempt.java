@@ -54,12 +54,5 @@ final class CombatAttempt {
         positions.add(new Position(now,point));
     }
     boolean near(Vec3 position) {return positions.stream().anyMatch(p->p.point().distanceToSqr(position)<=.25);}
-    private static long rounded(double value) {return Math.round(value*1000);}
-    Object healthSignature() {return List.of(rounded(unblocked),rounded(blocks),critical,calculated,type);}
-    Object blockSignature() {
-        // Compare all possible defenses conservatively; choosing the larger mace estimate is still guessing.
-        return List.of(rounded(raw),rounded(blocks),critical,calculated,
-                shields.stream().map(s->List.of(s.slot(),s.blocking(),rounded(afterGear(s.confirmed().remaining(raw))),rounded(s.confirmed().durability(raw,useGear)))).toList());
-    }
     boolean shieldWeapon(){return type==DamageWeapon.MACE||type==DamageWeapon.SPEAR;}
 }
