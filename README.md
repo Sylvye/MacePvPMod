@@ -8,7 +8,7 @@ The mod includes six modules plus the shared HUD Studio workspace:
 - **Damage Counter** — displays accumulated fall distance and confirmed mace, spear, sword, or axe damage, with reported and estimated calculation modes.
 - **Attribute Swaps** — gives visual and sound feedback when a hotbar selection changes the player’s active attack attributes.
 - **Survival instincts** — warns when a totem should be moved to the offhand and displays configurable low-health and low-saturation alerts, including optional audio cues.
-- **Reach Outlines** — outlines reachable faces of placeable blocks and distinguishes faces that are difficult to reach.
+- **Reach Outlines** — highlights reachable placement faces in wireframe or tint mode, with independent liquid source outlines, water/lava filters, and a nearest-source count limit. Color, opacity, width, and hard-to-reach face behavior are configurable for each.
 - **Vectors** — shows a motion-direction reticle and a configurable velocity readout.
 
 **HUD Studio** is the shared editor for overlay placement, size, colors, and previews.
@@ -139,6 +139,7 @@ Requires JDK 25; Gradle is provided by the wrapper.
 ./gradlew runClient
 ./gradlew runClientGameTest
 ./gradlew runClientGameTest -PwithoutModMenu
+./gradlew runClientGameTest -PwithoutModMenu -PreachOutlineTests
 ```
 
 Windows: use `gradlew.bat`. The installable mod and source JAR are in `build/libs/`. Unit test reports are in `build/reports/tests/test/`; in-game screenshots are in `build/run/clientGameTest/screenshots/`. Game tests use an isolated disposable instance under `build/run/`; they do not touch your normal Minecraft saves or configuration.

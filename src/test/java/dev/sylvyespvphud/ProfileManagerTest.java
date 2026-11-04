@@ -107,6 +107,23 @@ class ProfileManagerTest {
         assertTrue(reloaded.moduleEnabled(ProfileManager.Module.VECTORS));
     }
 
+    @Test void outlineModesAndLiquidChoicesSurviveProfileTogglesAndSwitches() throws Exception {
+        Path path=directory.resolve("profiles.json");var active=new AtomicReference<ProfileSettings>();
+        var manager=new ProfileManager(path,active::set);manager.load(ProfileSettings.defaults());
+        var defaults=ProfileSettings.defaults();
+        var liquid=new LiquidSourceConfig(false,false,true,21,OutlineRenderMode.TINT,0xee4400,.6,8,true,HardToReachMode.DO_NOT_RENDER,.8);
+        var reach=new ReachOutlineConfig(1,true,0x55ff66,.4,7,true,HardToReachMode.RENDER_FULL,.2,OutlineRenderMode.TINT,liquid);
+        manager.updateActive(new ProfileSettings(defaults.pitch(),defaults.damage(),defaults.attributeSwaps(),defaults.survival(),defaults.hud(),reach,defaults.vectors(),defaults.playerTracker()));
+        manager.setModuleEnabled(ProfileManager.Module.REACH_OUTLINES,false);
+        assertEquals(reach.withEnabled(false),active.get().reachOutlines());
+        manager.setModuleEnabled(ProfileManager.Module.REACH_OUTLINES,true);
+        assertEquals(reach,active.get().reachOutlines());
+        var other=manager.create("Other",false);manager.switchManual(other.id());
+        manager.switchManual("Default");assertEquals(reach,active.get().reachOutlines());
+        var reloaded=new ProfileManager(path,active::set);reloaded.load(ProfileSettings.defaults());
+        assertEquals(reach,reloaded.active().settings().reachOutlines());
+    }
+
     @Test void failedAtomicSaveLeavesSelectionAndLiveSettingsUnchanged() throws Exception {
         Path path = directory.resolve("profiles.json");
         var active = new AtomicReference<ProfileSettings>();

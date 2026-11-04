@@ -13,7 +13,8 @@ public final class SettingsScreen extends Screen {
     private static final String[] PAGES={"Overview","Pitch Bar","Damage","Attribute Swaps","Survival","Reach Outlines","Vectors","Player Tracker","HUD Studio"};
     private static final String[] HUD={"Pitch bar","Fall distance","Hit damage","Retotem","Healing","Attribute swap","Velocity","Damage total","Repot warning","Shield total"};
     private final Screen parent;private SettingsSession draft;private final boolean[] expanded=new boolean[28];private int page,tab,hudElement,sidebar,contentX,contentW;private String error="";private Button apply;
-    public SettingsScreen(Screen parent){super(Component.translatable("sylvyespvphud.settings.title"));this.parent=parent;draft=new SettingsSession();}
+    public SettingsScreen(Screen parent){this(parent,0);}
+    SettingsScreen(Screen parent,int page){super(Component.translatable("sylvyespvphud.settings.title"));this.parent=parent;this.page=page;draft=new SettingsSession();}
 
     protected void init(){sidebar=Math.min(168,Math.max(118,width/3));contentX=sidebar+14;contentW=Math.max(170,width-contentX-14);buildSidebar();var rows=LinearLayout.vertical().spacing(6);
         switch(page){case 0->overview(rows);case 1->pitch(rows);case 2->damage(rows);case 3->swaps(rows);case 4->survival(rows);case 5->reach(rows);case 6->vectors(rows);case 7->tracker(rows);case 8->hud(rows);}
@@ -60,7 +61,33 @@ public final class SettingsScreen extends Screen {
         appearance(r,8);
     }
 
-    private void reach(LinearLayout r){title(r,"Reach Outlines","Detection and rendering have separate visual hierarchy.");card(r,"DETECTION");toggle(r,"Top faces only","Ignore side and bottom faces.",draft.reach.topFacesOnly(),v->draft.reach("topFacesOnly",v),draft.reach.enabled());choice(r,"Hard-to-reach faces",draft.reach.hardToReachMode().label(),()->draft.reach("hardToReachMode",draft.reach.hardToReachMode().next()),draft.reach.enabled());slider(r,"Minimum reachable area","Required reachable fraction of a face.",draft.reach.minimumReachableArea()*100,1,100,1,v->draft.reach("minimumReachableArea",v/100),draft.reach.enabled());card(r,"RENDERING");slider(r,"Intensity","Outline opacity.",draft.reach.intensity()*100,2,100,1,v->draft.reach("intensity",v/100),draft.reach.enabled());slider(r,"Thickness","Outline width in pixels.",draft.reach.thickness(),1,ReachOutlineConfig.MAX_THICKNESS,1,v->draft.reach("thickness",(int)v),draft.reach.enabled());color(r,"Outline color",draft.reach.color(),c->draft.reach("color",c));reset(r);}
+    private void reach(LinearLayout r) {
+        title(r,"Reach Outlines","Highlight reachable placement faces and liquid sources.");
+        tabs(r,"Regular","Liquid Sources");
+        boolean liquids=tab==1;
+        var c=draft.reach; var l=c.liquidSources();
+        boolean active=c.enabled()&&(!liquids||l.enabled());
+        BiConsumer<String,Object> set=liquids?draft::liquidSources:draft::reach;
+        if(liquids) {
+            card(r,"LIQUID SOURCES");
+            toggle(r,"Liquid source outlines","Show sources you can target within reach.",l.enabled(),v->draft.liquidSources("enabled",v),c.enabled());
+            toggle(r,"Water","Highlight water source blocks.",l.water(),v->draft.liquidSources("water",v),active);
+            toggle(r,"Lava","Highlight lava source blocks.",l.lava(),v->draft.liquidSources("lava",v),active);
+            slider(r,"Maximum sources","Nearest targetable sources first.",l.maximumSources(),1,LiquidSourceConfig.MAX_SOURCES,1,v->draft.liquidSources("maximumSources",(int)v),active);
+        }
+        card(r,"DETECTION");
+        toggle(r,"Top faces only","Ignore side and bottom faces.",liquids?l.topFacesOnly():c.topFacesOnly(),v->set.accept("topFacesOnly",v),active);
+        var hard=liquids?l.hardToReachMode():c.hardToReachMode();
+        choice(r,"Hard-to-reach faces",hard.label(),()->set.accept("hardToReachMode",hard.next()),active);
+        slider(r,"Minimum reachable area","Required reachable fraction of a face.",(liquids?l.minimumReachableArea():c.minimumReachableArea())*100,1,100,1,v->set.accept("minimumReachableArea",v/100),active);
+        card(r,"RENDERING");
+        var mode=liquids?l.renderMode():c.renderMode();
+        choice(r,"Render mode",mode.label(),()->set.accept("renderMode",mode.next()),active);
+        slider(r,"Intensity","Highlight opacity.",(liquids?l.intensity():c.intensity())*100,2,100,1,v->set.accept("intensity",v/100),active);
+        slider(r,"Thickness","Wireframe width in pixels.",liquids?l.thickness():c.thickness(),1,ReachOutlineConfig.MAX_THICKNESS,1,v->set.accept("thickness",(int)v),active&&mode==OutlineRenderMode.WIREFRAME);
+        color(r,"Highlight color",liquids?l.color():c.color(),v->set.accept("color",v),active);
+        reset(r);
+    }
 
     private void vectors(LinearLayout r){title(r,"Vectors","See motion direction and speed at a glance.");tabs(r,"Reticle","Velocity");var v=draft.vectors;
         if(tab==0){card(r,"MOTION RETICLE");toggle(r,"Show reticle","Shows where to look to align with current velocity.",v.reticleEnabled(),n->draft.vectors("reticleEnabled",n),v.enabled());card(r,"WHEN TO SHOW");toggle(r,"When gliding","Allow while actively gliding.",v.elytraOnly(),n->draft.vectors("elytraOnly",n),v.enabled()&&v.reticleEnabled());toggle(r,"When charging","Allow while charging a spear attack.",v.spearOnly(),n->draft.vectors("spearOnly",n),v.enabled()&&v.reticleEnabled());note(r,"With both filters off, the reticle is unrestricted.");card(r,"APPEARANCE");choice(r,"Icon",v.icon().label(),()->draft.vectors("icon",v.icon().next()),v.enabled()&&v.reticleEnabled());slider(r,"Size","Icon size in GUI pixels.",v.size(),3,31,2,n->draft.vectors("size",(int)n),v.enabled()&&v.reticleEnabled());slider(r,"Opacity",null,v.opacity()*100,5,100,1,n->draft.vectors("opacity",n/100),v.enabled()&&v.reticleEnabled());slider(r,"Stationary threshold","Hide below this speed in blocks/second.",v.stationaryThreshold(),0,20,.05,n->draft.vectors("stationaryThreshold",n),v.enabled()&&v.reticleEnabled());color(r,"Reticle color",v.color(),n->draft.vectors("color",n));}
@@ -79,7 +106,8 @@ public final class SettingsScreen extends Screen {
     private void slider(LinearLayout r,String label,String desc,double value,double min,double max,double step,DoubleConsumer set,boolean active){var s=SettingsControls.slider("",value,min,max,step,132,v->{set.accept(v);if(apply!=null){apply.active=draft.validation().isEmpty();}});row(r,label,desc,s,active);}
     private void text(LinearLayout r,String label,String desc,String value,Consumer<String> set,boolean active){var box=new EditBox(font,0,0,150,20,Component.literal(label));box.setMaxLength(160);box.setValue(value);box.setResponder(v->{set.accept(v);if(apply!=null)apply.active=draft.validation().isEmpty();});row(r,label,desc,box,active);}
     private void template(LinearLayout r,String label,String value,boolean hit){text(r,label,(hit?"Supports {damage} and {blocks}.":"Supports {blocks}.")+" Preview: "+DamageText.format(value,12.5,18),value,v->draft.damage(hit?"hitTemplate":"fallTemplate",v),true);}
-    private void color(LinearLayout r,String label,int value,IntConsumer set){var edit=Button.builder(Component.literal("■ Edit").withColor(value),b->minecraft.gui.setScreen(new ColorPickerScreen(this,value,c->{set.accept(c);rebuildWidgets();}))).bounds(0,0,68,20).build();row(r,label,String.format("#%06X",value),edit,true);}
+    private void color(LinearLayout r,String label,int value,IntConsumer set){color(r,label,value,set,true);}
+    private void color(LinearLayout r,String label,int value,IntConsumer set,boolean active){var edit=Button.builder(Component.literal("■ Edit").withColor(value),b->minecraft.gui.setScreen(new ColorPickerScreen(this,value,c->{set.accept(c);rebuildWidgets();}))).bounds(0,0,68,20).build();row(r,label,String.format("#%06X",value),edit,active);}
     private void colorScale(LinearLayout r,String label,ColorScale scale,Consumer<ColorScale> set){boolean gearDomain="Hit colors".equals(label)&&draft.damage.useEnemyGear();ColorScale effective=gearDomain?scale.withDomain(0,20):scale;int sample=effective.mode()==ColorMode.FLAT?effective.flatColor():effective.color((effective.minimum()+effective.maximum())/2);String mode=scale.mode()==ColorMode.FLAT?"Flat":"Gradient";var edit=Button.builder(Component.literal("■ "+mode).withColor(sample),b->minecraft.gui.setScreen(new ColorScaleEditorScreen(this,label,scale,gearDomain,v->{set.accept(v);rebuildWidgets();}))).bounds(0,0,92,20).build();row(r,label,mode+(gearDomain?" color rule · 0–20 while using gear":" color rule"),edit,true);}
     private void itemList(LinearLayout r,String label,java.util.List<SurvivalItemRule> items,java.util.List<SurvivalItemRule> defaults,String field){var controls=LinearLayout.horizontal().spacing(4);controls.addChild(new RotatingItemPreview(items));controls.addChild(button("Edit "+items.size(),70,b->minecraft.gui.setScreen(new SurvivalItemEditor(this,label,items,defaults,v->{draft.survival(field,v);rebuildWidgets();}))));var line=LinearLayout.horizontal().spacing(6);line.addChild(new StringWidget(Math.max(80,contentW-118),20,Component.literal(label),font));line.addChild(controls);r.addChild(line);}
     private void tabs(LinearLayout r,String... names){

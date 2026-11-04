@@ -37,13 +37,18 @@ public final class ReachOutlines {
         private static int compare(double x1,double y1,double z1,double x2,double y2,double z2) {int c=Double.compare(x1,x2);if(c==0)c=Double.compare(y1,y2);if(c==0)c=Double.compare(z1,z2);return c;}
         private static long bits(double value){return Double.doubleToLongBits(Math.rint(value*4096)/4096);}
     }
-    private record CachedEdge(double x1,double y1,double z1,double x2,double y2,double z2,float opacity) {}
+    record Quad(AABB box, Direction face, float opacity) {}
+    record Geometry(List<Edge> edges, List<Quad> quads) {
+        static final Geometry EMPTY = new Geometry(List.of(), List.of());
+    }
+    private static final AABB UNIT_BOX = new AABB(0,0,0,1,1,1);
 
     private static final int NEG_X=0,POS_X=1,NEG_Y=2,POS_Y=3,NEG_Z=4,POS_Z=5,FACE_COUNT=6;
     private static final int REACH_SAMPLES=8;
     private static final double FACE_INSET=.002,EPSILON=1e-7;
+    private static final double[][] QUAD_CORNERS={{0,0},{1,0},{1,1},{0,1}};
     private static final Face[] FACES={new Face(NEG_X,Direction.WEST),new Face(POS_X,Direction.EAST),new Face(NEG_Y,Direction.DOWN),new Face(POS_Y,Direction.UP),new Face(NEG_Z,Direction.NORTH),new Face(POS_Z,Direction.SOUTH)};
-    private static List<CachedEdge> cachedEdges=List.of();
+    private static Geometry cachedRegular=Geometry.EMPTY, cachedLiquids=Geometry.EMPTY;
     private static ClientLevel cachedLevel;
     private static long cachedTick=Long.MIN_VALUE;
     private static ReachOutlineConfig cachedConfig;
@@ -53,30 +58,73 @@ public final class ReachOutlines {
     private ReachOutlines() {}
     public static void register(){ClientTickEvents.END_CLIENT_TICK.register(ReachOutlines::tick);LevelRenderEvents.COLLECT_SUBMITS.register(ReachOutlines::render);}
 
-    private static void tick(Minecraft mc){
+    static void tick(Minecraft mc){
         Player player=mc.player;ClientLevel level=mc.level;ReachOutlineConfig config=SylvyesPvPHud.REACH_OUTLINE_CONFIG.current();
-        if(!config.enabled()||player==null||level==null){cachedEdges=List.of();cachedLevel=level;return;}
+        if(!config.enabled()||player==null||level==null){cachedRegular=Geometry.EMPTY;cachedLiquids=Geometry.EMPTY;cachedLevel=level;cachedTick=Long.MIN_VALUE;return;}
         double reach=player.blockInteractionRange();BlockPos playerBlock=player.blockPosition();long tick=level.getGameTime();
         if(level==cachedLevel&&tick==cachedTick&&config.equals(cachedConfig)&&reach==cachedReach&&playerBlock.equals(cachedPlayerBlock))return;
-        cachedLevel=level;cachedTick=tick;cachedConfig=config;cachedReach=reach;cachedPlayerBlock=playerBlock.immutable();cachedEdges=buildGeometry(level,player,reach,config);
+        cachedLevel=level;cachedTick=tick;cachedConfig=config;cachedReach=reach;cachedPlayerBlock=playerBlock.immutable();buildGeometry(level,player,reach,config);
     }
 
-    private static void render(net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext context){
-        Minecraft mc=Minecraft.getInstance();if(mc.level==null||mc.level!=cachedLevel||cachedEdges.isEmpty())return;
-        Vec3 camera=context.levelState().cameraRenderState.pos;PoseStack pose=new PoseStack();pose.translate(-camera.x,-camera.y,-camera.z);List<CachedEdge> edges=cachedEdges;ReachOutlineConfig config=cachedConfig;
-        context.submitNodeCollector().submitCustomGeometry(pose,RenderTypes.linesTranslucent(),(blockPose,vertices)->drawEdges(blockPose,vertices,edges,config.argb(),config.thickness()));
+    private static void render(net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext context) {
+        Minecraft mc=Minecraft.getInstance();
+        if(mc.level==null||mc.level!=cachedLevel||cachedConfig==null||!SylvyesPvPHud.REACH_OUTLINE_CONFIG.current().enabled())return;
+        Vec3 camera=context.levelState().cameraRenderState.pos;
+        PoseStack pose=new PoseStack();pose.translate(-camera.x,-camera.y,-camera.z);
+        ReachOutlineConfig config=cachedConfig;
+        submit(context,pose,cachedRegular,config.argb(),config.thickness());
+        if(SylvyesPvPHud.REACH_OUTLINE_CONFIG.current().liquidSources().enabled())
+            submit(context,pose,cachedLiquids,config.liquidSources().argb(),config.liquidSources().thickness());
     }
 
-    private static List<CachedEdge> buildGeometry(ClientLevel level,Player player,double reach,ReachOutlineConfig config){
-        ArrayList<CachedEdge> result=new ArrayList<>();Vec3 eye=player.getEyePosition();int radius=(int)Math.ceil(reach)+1;BlockPos center=BlockPos.containing(eye);BlockPos.MutableBlockPos pos=new BlockPos.MutableBlockPos();double reachSquared=reach*reach;
-        for(int x=-radius;x<=radius;x++)for(int y=-radius;y<=radius;y++)for(int z=-radius;z<=radius;z++){
+    private static void submit(net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext context,
+                               PoseStack pose,Geometry geometry,int color,int thickness) {
+        if(!geometry.edges().isEmpty())context.submitNodeCollector().submitCustomGeometry(pose,RenderTypes.linesTranslucent(),
+                (blockPose,vertices)->drawEdges(blockPose,vertices,geometry.edges(),color,thickness));
+        if(!geometry.quads().isEmpty())context.submitNodeCollector().submitCustomGeometry(pose,RenderTypes.debugQuads(),
+                (blockPose,vertices)->drawQuads(blockPose,vertices,geometry.quads(),color));
+    }
+
+    private static void buildGeometry(ClientLevel level,Player player,double reach,ReachOutlineConfig config) {
+        ArrayList<Edge> regularEdges=new ArrayList<>(),liquidEdges=new ArrayList<>();
+        ArrayList<Quad> regularQuads=new ArrayList<>(),liquidQuads=new ArrayList<>();
+        ArrayList<LiquidSourceOutlines.Candidate> sources=new ArrayList<>();
+        Vec3 eye=player.getEyePosition();int radius=(int)Math.ceil(reach)+1;
+        BlockPos center=BlockPos.containing(eye);BlockPos.MutableBlockPos pos=new BlockPos.MutableBlockPos();double reachSquared=reach*reach;
+        for(int x=-radius;x<=radius;x++)for(int y=-radius;y<=radius;y++)for(int z=-radius;z<=radius;z++) {
             pos.setWithOffset(center,x,y,z);if(distanceSquaredToBox(eye,pos)>reachSquared)continue;
-            BlockState state=level.getBlockState(pos);if(!eligibleSupport(state))continue;
+            BlockState state=level.getBlockState(pos);
+            if(LiquidSourceOutlines.eligibleSource(state,config.liquidSources())) {
+                VoxelShape fluidShape=state.getFluidState().getShape(level,pos);
+                if(!fluidShape.isEmpty())sources.add(new LiquidSourceOutlines.Candidate(pos.immutable(),fluidShape,
+                        LiquidSourceOutlines.distanceSquared(eye,fluidShape.bounds().move(pos))));
+            }
+            if(!eligibleSupport(state))continue;
             VoxelShape shape=state.getShape(level,pos,CollisionContext.of(player)).optimize();if(shape.isEmpty())continue;
             float[] opacity=placeableFaces(level,player,pos,shape,eye,reach,config);if(opacity==null)continue;
-            for(Edge edge:shapeEdges(shape,opacity))result.add(new CachedEdge(pos.getX()+edge.x1,pos.getY()+edge.y1,pos.getZ()+edge.z1,pos.getX()+edge.x2,pos.getY()+edge.y2,pos.getZ()+edge.z2,edge.opacity));
+            appendGeometry(pos,shape,UNIT_BOX,opacity,config.renderMode(),regularEdges,regularQuads);
         }
-        return List.copyOf(result);
+        for(var source:LiquidSourceOutlines.selectSources(level,CollisionContext.of(player),eye,reach,config.liquidSources(),sources))
+            appendGeometry(source.pos(),source.shape(),source.shape().bounds(),source.opacity(),config.liquidSources().renderMode(),liquidEdges,liquidQuads);
+        cachedRegular=new Geometry(List.copyOf(regularEdges),List.copyOf(regularQuads));
+        cachedLiquids=new Geometry(List.copyOf(liquidEdges),List.copyOf(liquidQuads));
+    }
+
+    static Geometry geometry(BlockPos pos,VoxelShape shape,AABB bounds,float[] opacity,OutlineRenderMode mode) {
+        var edges=new ArrayList<Edge>();var quads=new ArrayList<Quad>();
+        appendGeometry(pos,shape,bounds,opacity,mode,edges,quads);
+        return new Geometry(List.copyOf(edges),List.copyOf(quads));
+    }
+
+    private static void appendGeometry(BlockPos pos,VoxelShape shape,AABB bounds,float[] opacity,OutlineRenderMode mode,
+                                       List<Edge> edges,List<Quad> quads) {
+        if(mode==OutlineRenderMode.WIREFRAME) {
+            for(Edge e:shapeEdges(shape,opacity,bounds))edges.add(new Edge(pos.getX()+e.x1,pos.getY()+e.y1,pos.getZ()+e.z1,
+                    pos.getX()+e.x2,pos.getY()+e.y2,pos.getZ()+e.z2,e.opacity));
+        } else {
+            for(AABB box:shape.toAabbs())for(Face f:FACES)if(opacity[f.index()]>0&&touchesBoundary(box,f.direction(),bounds))
+                quads.add(new Quad(box.move(pos),f.direction(),opacity[f.index()]));
+        }
     }
 
     static boolean eligibleSupport(BlockState state){return !state.isAir()&&state.getFluidState().isEmpty()&&!state.canBeReplaced();}
@@ -119,17 +167,27 @@ public final class ReachOutlines {
     }
     private static double axisDistance(double value,double min,double max,boolean farthest){if(farthest)return Math.max(Math.abs(value-min),Math.abs(value-max));if(value<min)return min-value;if(value>max)return value-max;return 0;}
 
-    static List<Edge> shapeEdges(VoxelShape shape,float[] faceOpacity){
+    static List<Edge> shapeEdges(VoxelShape shape,float[] faceOpacity){return shapeEdges(shape,faceOpacity,UNIT_BOX);}
+    static List<Edge> shapeEdges(VoxelShape shape,float[] faceOpacity,AABB bounds){
         Map<EdgeKey,Edge> edges=new HashMap<>();shape.forAllEdges((x1,y1,z1,x2,y2,z2)->{
-            int mask=boundaryMask(x1,y1,z1,x2,y2,z2);float opacity=0;double ox=0,oy=0,oz=0;
+            int mask=boundaryMask(x1,y1,z1,x2,y2,z2,bounds);float opacity=0;double ox=0,oy=0,oz=0;
             for(Face face:FACES)if((mask&(1<<face.index()))!=0&&faceOpacity[face.index()]>0){opacity=Math.max(opacity,faceOpacity[face.index()]);Direction d=face.direction();ox+=d.getStepX();oy+=d.getStepY();oz+=d.getStepZ();}
             if(opacity<=0)return;Edge edge=new Edge(x1+ox*FACE_INSET,y1+oy*FACE_INSET,z1+oz*FACE_INSET,x2+ox*FACE_INSET,y2+oy*FACE_INSET,z2+oz*FACE_INSET,opacity);edges.merge(EdgeKey.of(x1,y1,z1,x2,y2,z2),edge,(a,b)->a.opacity>=b.opacity?a:b);
         });return List.copyOf(edges.values());
     }
-    private static int boundaryMask(double x1,double y1,double z1,double x2,double y2,double z2){int mask=0;if(zero(x1)&&zero(x2))mask|=1<<NEG_X;if(one(x1)&&one(x2))mask|=1<<POS_X;if(zero(y1)&&zero(y2))mask|=1<<NEG_Y;if(one(y1)&&one(y2))mask|=1<<POS_Y;if(zero(z1)&&zero(z2))mask|=1<<NEG_Z;if(one(z1)&&one(z2))mask|=1<<POS_Z;return mask;}
+    private static int boundaryMask(double x1,double y1,double z1,double x2,double y2,double z2,AABB b) {
+        int mask=0;
+        if(near(x1,b.minX)&&near(x2,b.minX))mask|=1<<NEG_X;if(near(x1,b.maxX)&&near(x2,b.maxX))mask|=1<<POS_X;
+        if(near(y1,b.minY)&&near(y2,b.minY))mask|=1<<NEG_Y;if(near(y1,b.maxY)&&near(y2,b.maxY))mask|=1<<POS_Y;
+        if(near(z1,b.minZ)&&near(z2,b.minZ))mask|=1<<NEG_Z;if(near(z1,b.maxZ)&&near(z2,b.maxZ))mask|=1<<POS_Z;
+        return mask;
+    }
+    private static boolean near(double a,double b){return Math.abs(a-b)<EPSILON;}
+
     private static boolean hasBoundary(VoxelShape shape,Direction face){for(AABB box:shape.toAabbs())if(touchesBoundary(box,face))return true;return false;}
     private static boolean containsBoundaryPoint(VoxelShape shape,Direction face,Vec3 point){for(AABB box:shape.toAabbs())if(touchesBoundary(box,face)&&containsOnFace(box,face,point))return true;return false;}
-    private static boolean touchesBoundary(AABB b,Direction face){return switch(face){case WEST->zero(b.minX);case EAST->one(b.maxX);case DOWN->zero(b.minY);case UP->one(b.maxY);case NORTH->zero(b.minZ);case SOUTH->one(b.maxZ);};}
+    private static boolean touchesBoundary(AABB b,Direction face){return touchesBoundary(b,face,UNIT_BOX);}
+    private static boolean touchesBoundary(AABB b,Direction face,AABB bounds){return switch(face){case WEST->near(b.minX,bounds.minX);case EAST->near(b.maxX,bounds.maxX);case DOWN->near(b.minY,bounds.minY);case UP->near(b.maxY,bounds.maxY);case NORTH->near(b.minZ,bounds.minZ);case SOUTH->near(b.maxZ,bounds.maxZ);};}
     private static boolean containsOnFace(AABB b,Direction face,Vec3 p){return switch(face){case WEST,EAST->within(p.y,b.minY,b.maxY)&&within(p.z,b.minZ,b.maxZ);case DOWN,UP->within(p.x,b.minX,b.maxX)&&within(p.z,b.minZ,b.maxZ);case NORTH,SOUTH->within(p.x,b.minX,b.maxX)&&within(p.y,b.minY,b.maxY);};}
 
     private static boolean canInteractWithFace(ClientLevel level,Player player,BlockPos pos,VoxelShape shape,Vec3 eye,Direction face){Vec3 target=faceTarget(pos,shape,eye,face);if(target==null)return false;BlockHitResult hit=level.clip(new ClipContext(eye,target,ClipContext.Block.OUTLINE,ClipContext.Fluid.ANY,player));return hit.getBlockPos().equals(pos)&&hit.getDirection()==face;}
@@ -144,10 +202,21 @@ public final class ReachOutlines {
     private static Vec3 facePoint(Direction face,double a,double b,double inset){return switch(face){case WEST->new Vec3(inset,a,b);case EAST->new Vec3(1-inset,a,b);case DOWN->new Vec3(a,inset,b);case UP->new Vec3(a,1-inset,b);case NORTH->new Vec3(a,b,inset);case SOUTH->new Vec3(a,b,1-inset);};}
     private static boolean facesEye(BlockPos pos,Vec3 eye,Direction face){return switch(face){case WEST->eye.x<pos.getX();case EAST->eye.x>pos.getX()+1;case DOWN->eye.y<pos.getY();case UP->eye.y>pos.getY()+1;case NORTH->eye.z<pos.getZ();case SOUTH->eye.z>pos.getZ()+1;};}
     static double distanceSquaredToBox(Vec3 point,BlockPos pos){double dx=Math.max(Math.max(pos.getX()-point.x,0),point.x-pos.getX()-1),dy=Math.max(Math.max(pos.getY()-point.y,0),point.y-pos.getY()-1),dz=Math.max(Math.max(pos.getZ()-point.z,0),point.z-pos.getZ()-1);return dx*dx+dy*dy+dz*dz;}
-    private static boolean within(double v,double min,double max){return v>=min-EPSILON&&v<=max+EPSILON;}private static boolean zero(double v){return Math.abs(v)<EPSILON;}private static boolean one(double v){return Math.abs(v-1)<EPSILON;}
+    private static boolean within(double v,double min,double max){return v>=min-EPSILON&&v<=max+EPSILON;}
     static float edgeOpacity(float[] faceOpacity,int faceA,int faceB){return Math.max(faceOpacity[faceA],faceOpacity[faceB]);}
     static int scaledColor(int color,float opacity){int alpha=Math.round(((color>>>24)&0xff)*Math.clamp(opacity,0,1));return alpha<<24|color&0xffffff;}
-    private static void drawEdges(PoseStack.Pose pose,VertexConsumer vertices,List<CachedEdge> edges,int color,float width){for(CachedEdge edge:edges)drawLine(pose,vertices,edge,scaledColor(color,edge.opacity),width);}
-    private static void drawLine(PoseStack.Pose pose,VertexConsumer vertices,CachedEdge edge,int color,float width){float dx=(float)(edge.x2-edge.x1),dy=(float)(edge.y2-edge.y1),dz=(float)(edge.z2-edge.z1),length=(float)Math.sqrt(dx*dx+dy*dy+dz*dz);dx/=length;dy/=length;dz/=length;lineVertex(pose,vertices,(float)edge.x1,(float)edge.y1,(float)edge.z1,dx,dy,dz,color,width);lineVertex(pose,vertices,(float)edge.x2,(float)edge.y2,(float)edge.z2,dx,dy,dz,color,width);}
+    private static void drawEdges(PoseStack.Pose pose,VertexConsumer vertices,List<Edge> edges,int color,float width){for(Edge edge:edges)drawLine(pose,vertices,edge,scaledColor(color,edge.opacity),width);}
+    private static void drawQuads(PoseStack.Pose pose,VertexConsumer vertices,List<Quad> quads,int color) {
+        for(Quad quad:quads) {
+            AABB b=quad.box();Direction face=quad.face();
+            int tinted=scaledColor(color,quad.opacity());
+            for(double[] uv:QUAD_CORNERS) {
+                Vec3 point=LiquidSourceOutlines.facePoint(b,face,uv[0],uv[1])
+                        .add(face.getStepX()*FACE_INSET,face.getStepY()*FACE_INSET,face.getStepZ()*FACE_INSET);
+                vertices.addVertex(pose,(float)point.x,(float)point.y,(float)point.z).setColor(tinted);
+            }
+        }
+    }
+    private static void drawLine(PoseStack.Pose pose,VertexConsumer vertices,Edge edge,int color,float width){float dx=(float)(edge.x2-edge.x1),dy=(float)(edge.y2-edge.y1),dz=(float)(edge.z2-edge.z1),length=(float)Math.sqrt(dx*dx+dy*dy+dz*dz);dx/=length;dy/=length;dz/=length;lineVertex(pose,vertices,(float)edge.x1,(float)edge.y1,(float)edge.z1,dx,dy,dz,color,width);lineVertex(pose,vertices,(float)edge.x2,(float)edge.y2,(float)edge.z2,dx,dy,dz,color,width);}
     private static void lineVertex(PoseStack.Pose pose,VertexConsumer vertices,float x,float y,float z,float nx,float ny,float nz,int color,float width){vertices.addVertex(pose,x,y,z).setColor(color).setNormal(pose,nx,ny,nz).setLineWidth(width);}
 }

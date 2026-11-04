@@ -84,6 +84,7 @@ final class SettingsSession {
     void repot(String field,Object value){survival("repot",with(survival.repot(),field,value));}
     void repotAttention(String field,Object value){repot("attention",with(survival.repot().attention(),field,value));}
     void reach(String field,Object value){reach=with(reach,field,value);}
+    void liquidSources(String field,Object value){reach("liquidSources",with(reach.liquidSources(),field,value));}
     void vectors(String field,Object value){vectors=with(vectors,field,value);}
     void tracker(String field,Object value){tracker=with(tracker,field,value);}
 
@@ -97,7 +98,7 @@ final class SettingsSession {
         if (page == 2) damage = copyDamage(!damage.enabled());
         if (page == 3) swap = new AttributeSwapConfig(2,swap.visualEnabled(),swap.soundEnabled(),swap.soundId(),swap.weaponOnly(),swap.successfulHitOnly(),!swap.enabled());
         if (page == 4) survival = copySurvival(!survival.enabled());
-        if (page == 5) reach = new ReachOutlineConfig(1,!reach.enabled(),reach.color(),reach.intensity(),reach.thickness(),reach.topFacesOnly(),reach.hardToReachMode(),reach.minimumReachableArea());
+        if (page == 5) reach = reach.withEnabled(!reach.enabled());
         if (page == 6) vectors = new VectorsConfig(2,!vectors.enabled(),vectors.reticleEnabled(),vectors.velocityEnabled(),vectors.elytraOnly(),vectors.spearOnly(),vectors.icon(),vectors.size(),vectors.color(),vectors.opacity(),vectors.stationaryThreshold(),vectors.velocityThreshold(),vectors.velocityTemplate(),vectors.velocityColors());
         if (page == 7) tracker = new TrackerConfig(4,!tracker.enabled(),tracker.radius(),tracker.opacity(),tracker.iconSize(),tracker.onlyWhenPlayerListHeld(),tracker.displayMode(),tracker.hideLocatorBar(),tracker.distanceScalingStrength(),tracker.showDistance(),tracker.hideDistantPlayers(),tracker.hideStartDistance(),tracker.maxVisiblePlayers(),tracker.placement(),tracker.nearFadeDistance());
     }
